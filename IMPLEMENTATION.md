@@ -68,18 +68,23 @@ Following the incremental approach suggested in the project specification, we'll
 ### Phase 4: File Operations
 **Goal**: Implement core file operations and save functionality
 
-1. **Implement file opening**
+1. **Implement file creation**
+   - [x] Add "New File" menu item and handler
+   - [x] Implement file creation dialog
+   - [x] Create empty Markdown files, refresh the tree, and open new files in tabs
+
+2. **Implement file opening**
    - Add "Open File" menu item and handler
    - Implement file selection dialog
    - Handle file validation and loading
 
-2. **Implement save functionality**
+3. **Implement save functionality**
    - Add "Save File" and "Save All" menu items
    - Implement file saving logic
    - Update document modification state
    - Clear asterisk indicators on save
 
-3. **Handle file closing**
+4. **Handle file closing**
    - Implement tab closing with modification prompts
    - Add "Close Tab" functionality
    - Handle unsaved changes appropriately
@@ -137,19 +142,19 @@ Following the incremental approach suggested in the project specification, we'll
 **Goal**: Add polish, error handling, and advanced features
 
 1. **Error handling**
-   - Implement graceful error handling for file operations
-   - Add error dialogs for common failure cases
-   - Handle external file changes
+   - [x] Implement graceful error handling for file operations
+   - [x] Add error dialogs for common failure cases
+   - [x] Handle external file changes
 
 2. **User experience improvements**
-   - Add window size and position persistence
-   - Implement recent files/folders functionality
-   - Add settings management
+   - [x] Add window size and position persistence
+   - [x] Implement recent files/folders functionality
+   - [x] Add settings management
 
 3. **Testing and documentation**
-   - Add unit tests for core functionality
-   - Document implementation details
-   - Create user documentation
+   - [x] Add unit tests for core functionality
+   - [x] Document implementation details
+   - [x] Create user documentation
 
 ## Technical Requirements
 

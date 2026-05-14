@@ -12,8 +12,8 @@ This is a C++ Markdown editor application built with wxWidgets and CMake. The ap
 - Target Platforms: Linux, Windows, macOS
 
 ## Key Commands
-- Build: `cmake . && make` (or `cmake --build .`)
-- Run: `./glance` (after building)
+- Build: `cmake -S . -B build && make -C build` (or `cmake --build build`)
+- Run: `./build/glance` (after building)
 - Command-line usage: `glance [folder_path]`
 
 ## Architecture

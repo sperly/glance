@@ -10,7 +10,7 @@ class GlanceApp : public wxApp
 public:
     virtual bool OnInit() override;
     virtual int OnExit() override;
-    
+
 private:
     MainFrame* m_mainFrame;
 };

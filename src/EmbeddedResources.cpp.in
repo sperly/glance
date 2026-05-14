@@ -1,0 +1,37 @@
+#include "EmbeddedResources.h"
+
+namespace
+{
+const unsigned char kEmbeddedGlanceIconPng[] = {
+    @GLANCE_ICON_PNG_BYTES@
+};
+
+const unsigned char kEmbeddedGlanceLogoPng[] = {
+    @GLANCE_LOGO_PNG_BYTES@
+};
+}
+
+const char* GetEmbeddedHelpMarkdown()
+{
+    return R"glance_help(@GLANCE_HELP_MARKDOWN@)glance_help";
+}
+
+const unsigned char* GetEmbeddedGlanceIconPngData()
+{
+    return kEmbeddedGlanceIconPng;
+}
+
+std::size_t GetEmbeddedGlanceIconPngSize()
+{
+    return @GLANCE_ICON_PNG_SIZE@;
+}
+
+const unsigned char* GetEmbeddedGlanceLogoPngData()
+{
+    return kEmbeddedGlanceLogoPng;
+}
+
+std::size_t GetEmbeddedGlanceLogoPngSize()
+{
+    return @GLANCE_LOGO_PNG_SIZE@;
+}

@@ -3,22 +3,59 @@ project(glance)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(CTest)
+
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(GlanceResources)
+include(GlanceTests)
+include(GlanceWebView)
 
 # Find wxWidgets
-find_package(wxWidgets REQUIRED COMPONENTS core base adv aui html)
+find_package(wxWidgets REQUIRED COMPONENTS core base adv aui html stc)
 include(${wxWidgets_USE_FILE})
+
+glance_configure_embedded_resources(GLANCE_EMBEDDED_RESOURCES_SOURCE)
 
 # Add executable
 add_executable(glance
     src/main.cpp
+    ${GLANCE_EMBEDDED_RESOURCES_SOURCE}
+    src/EmbeddedResources.h
     src/GlanceApp.cpp
     src/GlanceApp.h
+    src/AboutDialog.cpp
+    src/AboutDialog.h
     src/MainFrame.cpp
     src/MainFrame.h
+    src/FileTreePanel.cpp
+    src/FileTreePanel.h
+    src/Document.cpp
+    src/Document.h
+    src/DocumentManager.cpp
+    src/DocumentManager.h
+    src/EditorNotebook.cpp
+    src/EditorNotebook.h
+    src/GlanceCtrl.cpp
+    src/GlanceCtrl.h
+    src/HelpDialog.cpp
+    src/HelpDialog.h
+    src/MarkdownRenderer.cpp
+    src/MarkdownRenderer.h
+    src/PreviewPanel.cpp
+    src/PreviewPanel.h
+    src/ResourcePaths.cpp
+    src/ResourcePaths.h
+    src/SettingsManager.cpp
+    src/SettingsManager.h
 )
 
 # Link wxWidgets libraries
 target_link_libraries(glance ${wxWidgets_LIBRARIES})
+glance_configure_webview(glance)
+
+target_compile_definitions(glance PRIVATE GLANCE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Include directories
-target_include_directories(glance PRIVATE src)
+target_include_directories(glance PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
+
+glance_add_core_tests()

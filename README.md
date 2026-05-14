@@ -40,35 +40,60 @@ glance/
 - [x] Basic menu items (File, Help)
 
 ### Phase 2: Folder and File Tree Browser
-- [ ] Folder opening functionality
-- [ ] File tree panel implementation
-- [ ] Integration with main window
+- [x] Folder opening functionality
+- [x] File tree panel implementation
+- [x] Integration with main window
 
 ### Phase 3: Tabbed Editor Implementation
-- [ ] Editor notebook implementation
-- [ ] Editor control wrapper
-- [ ] Document management system
+- [x] Editor notebook implementation
+- [x] Editor control wrapper
+- [x] Document management system
 
 ### Phase 4: File Operations
-- [ ] File opening functionality
-- [ ] Save functionality
-- [ ] File closing handling
+- [x] New file functionality
+- [x] File opening functionality
+- [x] Save functionality
+- [x] File closing handling
 
 ### Phase 5: Markdown Preview
-- [ ] Preview panel implementation
-- [ ] Markdown rendering system
-- [ ] Preview synchronization
+- [x] Preview panel implementation
+- [x] Markdown rendering system
+- [x] Preview synchronization
 
 ### Phase 6: Formatting and Insertion Tools
-- [ ] Format menu implementation
-- [ ] Insert menu implementation
-- [ ] Keyboard shortcuts
+- [x] Format menu implementation
+- [x] Insert menu implementation
+- [x] Keyboard shortcuts
 
 ### Phase 7: Help and About System
-- [ ] Help system implementation
-- [ ] About dialog implementation
+- [x] Help system implementation
+- [x] About dialog implementation
 
 ### Phase 8: Polish and Advanced Features
-- [ ] Error handling
-- [ ] User experience improvements
-- [ ] Testing and documentation
+- [x] Error handling
+- [x] User experience improvements
+- [x] Testing and documentation
+
+## Building and Testing
+
+Configure and build the application with CMake:
+
+```sh
+cmake -S . -B build
+cmake --build build
+```
+
+Run the lightweight core test suite with CTest:
+
+```sh
+ctest --test-dir build --output-on-failure
+```
+
+## User Notes
+
+- Create a document with **File > New File...**.
+- Open a workspace with **File > Open Folder...** or a single Markdown file with **File > Open File...**.
+- Recently opened files and folders are available from the **File** menu.
+- Window size, splitter positions, and recent items are restored between launches.
+- When an open document changes on disk while Glance is in the background, Glance prompts before reloading it.
+- Use **Help > Save Preview HTML...** to export the current preview as raw HTML.

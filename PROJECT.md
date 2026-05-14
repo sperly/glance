@@ -11,6 +11,7 @@ The goal is to create a practical, lightweight Markdown writing environment with
 - Use **wxWidgets** as the main GUI framework.
 - Support opening a folder from the command line.
 - Display Markdown files from the opened folder in a tree browser.
+- Allow creating new Markdown files from the GUI.
 - Allow opening and editing multiple Markdown files in tabs.
 - Show a live or refreshable Markdown preview.
 - Track unsaved changes clearly.
@@ -146,6 +147,7 @@ README.md
 - The editor should support common editing shortcuts:
   - Ctrl+S: Save current file
   - Ctrl+Shift+S: Save all files
+  - Ctrl+N: New file
   - Ctrl+O: Open file
   - Ctrl+Shift+O or Ctrl+Alt+O: Open folder
   - Ctrl+W: Close current tab
@@ -233,6 +235,7 @@ The **File** menu shall contain:
 
 | Menu Item | Description |
 |---|---|
+| New File | Creates a new Markdown file and opens it in an editor tab. |
 | Open Folder | Opens a folder and populates the Markdown tree browser. |
 | Open File | Opens a Markdown file in a new editor tab. |
 | Save File | Saves the currently active file. |
@@ -241,6 +244,15 @@ The **File** menu shall contain:
 | Exit | Closes the application. |
 
 ### 9.1 File Menu Behavior
+
+#### New File
+
+- Shows a save-style file picker dialog.
+- Defaults to the currently opened folder when one is available.
+- Adds a Markdown extension such as `.md` when the user omits one.
+- Creates an empty Markdown file and opens it in a new editor tab.
+- Refreshes the file tree when the new file is inside the opened folder.
+- If the selected file already exists, ask whether to open the existing file instead of replacing it.
 
 #### Open Folder
 
