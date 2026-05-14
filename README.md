@@ -10,7 +10,8 @@ glance/
 ├── README.md
 ├── resources/
 │   ├── help.md
-│   └── app_icon.png
+│   └── glance_icon.png
+│   └── glance_logo.png
 ├── src/
 │   ├── main.cpp
 │   ├── GlanceApp.h/cpp
