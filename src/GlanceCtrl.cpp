@@ -115,13 +115,15 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
         ClearFormatting();
         break;
     case MarkdownCommand::Link:
-        InsertSnippet("[" + (secondaryArgument.empty() ? "link text" : secondaryArgument) + "](" +
-                      (argument.empty() ? "https://example.com" : argument) + ")");
-        break;
-    case MarkdownCommand::Image:
-        InsertSnippet("![" + (secondaryArgument.empty() ? "alt text" : secondaryArgument) + "](" +
-                      (argument.empty() ? "image.png" : argument) + ")");
-        break;
+    InsertSnippet(wxString::Format("[%s](%s)", 
+        secondaryArgument.empty() ? "link text" : secondaryArgument,
+        argument.empty() ? "https://example.com" : argument));
+    break;
+case MarkdownCommand::Image:
+    InsertSnippet(wxString::Format("![%s](%s)", 
+        secondaryArgument.empty() ? "alt text" : secondaryArgument,
+        argument.empty() ? "image.png" : argument));
+    break;
     case MarkdownCommand::Table:
     {
         int columns = wxAtoi(argument);
