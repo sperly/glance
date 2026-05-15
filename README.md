@@ -1,4 +1,6 @@
 # Glance Markdown Editor
+[![CMake on multiple platforms](https://github.com/sperly/glance/actions/workflows/cmake-multi-platform.yml/badge.svg)](https://github.com/sperly/glance/actions/workflows/cmake-multi-platform.yml)
+
 ![glance-logo](resources/glance-logo-small.png)
 
 Located at [Glance at Github](https://github.com/sperly/glance)
