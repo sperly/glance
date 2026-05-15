@@ -2,6 +2,7 @@
 #include "Document.h"
 #include <wx/datetime.h>
 #include <wx/font.h>
+#include <algorithm>
 #include <cstdlib>
 
 GlanceCtrl::GlanceCtrl(wxWindow* parent, Document* document)
@@ -114,15 +115,35 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
         ClearFormatting();
         break;
     case MarkdownCommand::Link:
-        WrapSelection("[", "](" + (argument.empty() ? "https://example.com" : argument) + ")", "link text");
+        InsertSnippet("[" + (secondaryArgument.empty() ? "link text" : secondaryArgument) + "](" +
+                      (argument.empty() ? "https://example.com" : argument) + ")");
         break;
     case MarkdownCommand::Image:
         InsertSnippet("![" + (secondaryArgument.empty() ? "alt text" : secondaryArgument) + "](" +
                       (argument.empty() ? "image.png" : argument) + ")");
         break;
     case MarkdownCommand::Table:
-        InsertSnippet("\n| Column 1 | Column 2 | Column 3 |\n|---|---|---|\n| Value 1 | Value 2 | Value 3 |\n");
+    {
+        int columns = wxAtoi(argument);
+        if (columns < 1)
+        {
+            columns = 3;
+        }
+        columns = std::clamp(columns, 1, 12);
+
+        wxString header = "\n|";
+        wxString separator = "|";
+        wxString row = "|";
+        for (int column = 1; column <= columns; ++column)
+        {
+            header += wxString::Format(" Column %d |", column);
+            separator += "---|";
+            row += wxString::Format(" Value %d |", column);
+        }
+
+        InsertSnippet(header + "\n" + separator + "\n" + row + "\n");
         break;
+    }
     case MarkdownCommand::Date:
         InsertSnippet(wxDateTime::Now().FormatISODate());
         break;
@@ -195,9 +216,25 @@ void GlanceCtrl::WrapSelection(const wxString& prefix, const wxString& suffix, c
 
 void GlanceCtrl::InsertSnippet(const wxString& snippet)
 {
+    int selectionStart = GetSelectionStart();
+    int selectionEnd = GetSelectionEnd();
+    if (selectionEnd < selectionStart)
+    {
+        std::swap(selectionStart, selectionEnd);
+    }
+
     BeginUndoAction();
-    ReplaceSelection(snippet);
+    InsertText(selectionStart, snippet);
     EndUndoAction();
+
+    const int insertedLength = static_cast<int>(snippet.length());
+    if (selectionStart != selectionEnd)
+    {
+        SetSelection(selectionStart + insertedLength, selectionEnd + insertedLength);
+        return;
+    }
+
+    SetSelection(selectionStart + insertedLength, selectionStart + insertedLength);
 }
 
 void GlanceCtrl::PrefixSelectedLines(const wxString& prefix)

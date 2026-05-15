@@ -62,6 +62,7 @@ private:
                                 const wxString& secondaryArgument = wxString());
     wxString GetDefaultNewFileDirectory() const;
     wxString MakeMarkdownImagePath(const wxString& imagePath) const;
+    void UpdateDocumentCommandState();
     void ApplyWindowSettings();
     void SaveWindowSettings();
     void RefreshRecentMenus();

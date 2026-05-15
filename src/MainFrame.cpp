@@ -13,10 +13,8 @@
 #include <wx/icon.h>
 #include <wx/image.h>
 #include <wx/mstream.h>
-#include <wx/print.h>
+#include <wx/numdlg.h>
 #include <wx/textdlg.h>
-#include <algorithm>
-#include <vector>
 
 namespace
 {
@@ -82,95 +80,6 @@ wxString ToMarkdownPath(wxString path)
     path.Replace("\\", "/");
     return path;
 }
-
-std::vector<wxString> SplitLines(const wxString& text)
-{
-    std::vector<wxString> lines;
-    wxString currentLine;
-
-    for (wxUniChar character : text)
-    {
-        if (character == '\r')
-        {
-            continue;
-        }
-        if (character == '\n')
-        {
-            lines.push_back(currentLine);
-            currentLine.clear();
-            continue;
-        }
-
-        currentLine.append(character);
-    }
-
-    lines.push_back(currentLine);
-    return lines;
-}
-
-class MarkdownPrintout : public wxPrintout
-{
-public:
-    MarkdownPrintout(const wxString& title, const wxString& content)
-        : wxPrintout(title),
-          m_lines(SplitLines(content))
-    {
-    }
-
-    bool HasPage(int pageNumber) override
-    {
-        return pageNumber >= 1 && static_cast<size_t>((pageNumber - 1) * LinesPerPage()) < m_lines.size();
-    }
-
-    bool OnPrintPage(int pageNumber) override
-    {
-        wxDC* dc = GetDC();
-        if (!dc)
-        {
-            return false;
-        }
-
-        dc->SetFont(wxFontInfo(10).Family(wxFONTFAMILY_TELETYPE));
-
-        int width = 0;
-        int height = 0;
-        dc->GetSize(&width, &height);
-
-        int lineHeight = 0;
-        dc->GetTextExtent("Ag", nullptr, &lineHeight);
-
-        const int marginX = width / 12;
-        const int marginY = height / 12;
-        const size_t startLine = static_cast<size_t>((pageNumber - 1) * LinesPerPage());
-        const size_t endLine = std::min(startLine + LinesPerPage(), m_lines.size());
-
-        int y = marginY;
-        for (size_t line = startLine; line < endLine; ++line)
-        {
-            dc->DrawText(m_lines[line], marginX, y);
-            y += lineHeight;
-        }
-
-        return true;
-    }
-
-    void GetPageInfo(int* minPage, int* maxPage, int* pageFrom, int* pageTo) override
-    {
-        const int pages = std::max(1, static_cast<int>((m_lines.size() + LinesPerPage() - 1) / LinesPerPage()));
-        *minPage = 1;
-        *maxPage = pages;
-        *pageFrom = 1;
-        *pageTo = pages;
-    }
-
-private:
-    static constexpr size_t LinesPerPage()
-    {
-        return 55;
-    }
-
-    std::vector<wxString> m_lines;
-};
 }
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
@@ -229,6 +138,7 @@ MainFrame::MainFrame()
     SetStatusText("Glance Markdown Editor", 1);
     ApplyWindowSettings();
     RefreshRecentMenus();
+    UpdateDocumentCommandState();
 }
 
 MainFrame::~MainFrame()
@@ -274,7 +184,6 @@ void MainFrame::CreateMenuBar()
     formatMenu->Append(ID_FORMAT_BOLD, "&Bold\tCtrl+B", "Wrap selection with bold Markdown");
     formatMenu->Append(ID_FORMAT_ITALIC, "&Italic\tCtrl+I", "Wrap selection with italic Markdown");
     formatMenu->Append(ID_FORMAT_BOLD_ITALIC, "Bold &Italic", "Wrap selection with bold italic Markdown");
-    formatMenu->Append(ID_FORMAT_UNDERLINE, "&Underline", "Wrap selection in underline HTML");
     formatMenu->Append(ID_FORMAT_STRIKETHROUGH, "&Strikethrough", "Wrap selection with strikethrough Markdown");
     formatMenu->Append(ID_FORMAT_INLINE_CODE, "Inline &Code\tCtrl+`", "Wrap selection with inline code markers");
     formatMenu->Append(ID_FORMAT_CODE_BLOCK, "Code &Block", "Insert a fenced code block");
@@ -305,9 +214,6 @@ void MainFrame::CreateMenuBar()
     insertMenu->Append(ID_INSERT_IMAGE, "&Image...", "Insert a Markdown image");
     insertMenu->Append(ID_INSERT_TABLE, "&Table", "Insert a Markdown table");
     insertMenu->AppendSeparator();
-    insertMenu->Append(ID_INSERT_CODE_BLOCK, "Code &Block");
-    insertMenu->Append(ID_INSERT_INLINE_CODE, "Inline &Code");
-    insertMenu->Append(ID_INSERT_BLOCKQUOTE, "Block&quote");
     insertMenu->Append(ID_INSERT_BULLET_LIST, "&Bullet List");
     insertMenu->Append(ID_INSERT_NUMBERED_LIST, "&Numbered List");
     insertMenu->Append(ID_INSERT_TASK_LIST, "Task &List");
@@ -316,10 +222,6 @@ void MainFrame::CreateMenuBar()
     insertMenu->Append(ID_INSERT_DATE, "&Date");
     insertMenu->Append(ID_INSERT_TIME, "T&ime");
     insertMenu->Append(ID_INSERT_DATE_TIME, "Date and Ti&me");
-    insertMenu->AppendSeparator();
-    insertMenu->Append(ID_INSERT_HTML_COMMENT, "HTML &Comment");
-    insertMenu->Append(ID_INSERT_FOOTNOTE, "&Footnote");
-    insertMenu->Append(ID_INSERT_TOC, "Table of Contents &Marker");
 
     // Help menu
     wxMenu* helpMenu = new wxMenu();
@@ -509,15 +411,13 @@ void MainFrame::OnFilePrint(wxCommandEvent& event)
         return;
     }
 
-    MarkdownPrintout printout(document->GetFileName(), document->GetContent());
-    wxPrinter printer;
-    if (!printer.Print(this, &printout, true))
+    if (!m_previewPanel->PrintMarkdown(document->GetContent(), document->GetFilePath(), document->GetFileName()))
     {
         SetStatusText("Print cancelled or failed", 0);
         return;
     }
 
-    SetStatusText("Printed: " + document->GetFileName(), 0);
+    SetStatusText("Opened print dialog: " + document->GetFileName(), 0);
 }
 
 void MainFrame::OnFileExit(wxCommandEvent& event)
@@ -655,10 +555,36 @@ void MainFrame::OnInsertCommand(wxCommandEvent& event)
     {
     case ID_INSERT_LINK:
     {
-        wxTextEntryDialog dialog(this, "Link URL:", "Insert Link", "https://example.com");
+        wxDialog dialog(this, wxID_ANY, "Insert Link");
+        wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
+
+        mainSizer->Add(new wxStaticText(&dialog, wxID_ANY, "Link text:"),
+                       0,
+                       wxLEFT | wxRIGHT | wxTOP,
+                       12);
+        wxTextCtrl* textCtrl = new wxTextCtrl(&dialog, wxID_ANY, "link text");
+        mainSizer->Add(textCtrl, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 12);
+
+        mainSizer->Add(new wxStaticText(&dialog, wxID_ANY, "Link URL:"),
+                       0,
+                       wxLEFT | wxRIGHT | wxTOP,
+                       12);
+        wxTextCtrl* urlCtrl = new wxTextCtrl(&dialog, wxID_ANY, "https://example.com");
+        mainSizer->Add(urlCtrl, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 12);
+
+        wxStdDialogButtonSizer* buttonSizer = new wxStdDialogButtonSizer();
+        buttonSizer->AddButton(new wxButton(&dialog, wxID_OK));
+        buttonSizer->AddButton(new wxButton(&dialog, wxID_CANCEL));
+        buttonSizer->Realize();
+        mainSizer->Add(buttonSizer, 0, wxEXPAND | wxALL, 12);
+
+        dialog.SetSizerAndFit(mainSizer);
+        textCtrl->SetFocus();
+        textCtrl->SelectAll();
+
         if (dialog.ShowModal() == wxID_OK)
         {
-            ExecuteMarkdownCommand(MarkdownCommand::Link, dialog.GetValue());
+            ExecuteMarkdownCommand(MarkdownCommand::Link, urlCtrl->GetValue(), textCtrl->GetValue());
         }
         break;
     }
@@ -686,8 +612,20 @@ void MainFrame::OnInsertCommand(wxCommandEvent& event)
         break;
     }
     case ID_INSERT_TABLE:
-        ExecuteMarkdownCommand(MarkdownCommand::Table);
+    {
+        wxNumberEntryDialog dialog(this,
+                                   "Choose how many columns the Markdown table should have.",
+                                   "Columns:",
+                                   "Insert Table",
+                                   3,
+                                   1,
+                                   12);
+        if (dialog.ShowModal() == wxID_OK)
+        {
+            ExecuteMarkdownCommand(MarkdownCommand::Table, wxString::Format("%ld", dialog.GetValue()));
+        }
         break;
+    }
     case ID_INSERT_CODE_BLOCK:
         ExecuteMarkdownCommand(MarkdownCommand::CodeBlock);
         break;
@@ -801,6 +739,7 @@ void MainFrame::OnActiveDocumentChanged(wxCommandEvent& event)
     {
         SetStatusText("Active file: " + event.GetString(), 0);
     }
+    UpdateDocumentCommandState();
     UpdatePreview();
 }
 
@@ -960,6 +899,69 @@ wxString MainFrame::MakeMarkdownImagePath(const wxString& imagePath) const
     }
 
     return ToMarkdownPath(markdownPath);
+}
+
+void MainFrame::UpdateDocumentCommandState()
+{
+    wxMenuBar* menuBar = GetMenuBar();
+    if (!menuBar)
+    {
+        return;
+    }
+
+    const bool hasDocument = m_editorNotebook && m_editorNotebook->GetCurrentDocument();
+
+    menuBar->EnableTop(1, hasDocument); // Edit
+    menuBar->EnableTop(2, hasDocument); // Format
+    menuBar->EnableTop(3, hasDocument); // Insert
+
+    const int documentCommandIds[] = {
+        wxID_SAVE,
+        ID_SAVE_ALL,
+        ID_CLOSE_TAB,
+        wxID_PRINT,
+        wxID_UNDO,
+        wxID_REDO,
+        wxID_CUT,
+        wxID_COPY,
+        wxID_PASTE,
+        wxID_SELECTALL,
+        ID_FORMAT_BOLD,
+        ID_FORMAT_ITALIC,
+        ID_FORMAT_BOLD_ITALIC,
+        ID_FORMAT_STRIKETHROUGH,
+        ID_FORMAT_INLINE_CODE,
+        ID_FORMAT_CODE_BLOCK,
+        ID_FORMAT_BLOCKQUOTE,
+        ID_FORMAT_HEADING_1,
+        ID_FORMAT_HEADING_2,
+        ID_FORMAT_HEADING_3,
+        ID_FORMAT_HEADING_4,
+        ID_FORMAT_HEADING_5,
+        ID_FORMAT_HEADING_6,
+        ID_FORMAT_BULLET_LIST,
+        ID_FORMAT_NUMBERED_LIST,
+        ID_FORMAT_TASK_LIST,
+        ID_FORMAT_COMPLETED_TASK,
+        ID_FORMAT_HORIZONTAL_RULE,
+        ID_FORMAT_CLEAR_FORMATTING,
+        ID_INSERT_LINK,
+        ID_INSERT_IMAGE,
+        ID_INSERT_TABLE,
+        ID_INSERT_BULLET_LIST,
+        ID_INSERT_NUMBERED_LIST,
+        ID_INSERT_TASK_LIST,
+        ID_INSERT_HORIZONTAL_RULE,
+        ID_INSERT_DATE,
+        ID_INSERT_TIME,
+        ID_INSERT_DATE_TIME,
+        ID_HELP_SAVE_PREVIEW_HTML,
+    };
+
+    for (int id : documentCommandIds)
+    {
+        menuBar->Enable(id, hasDocument);
+    }
 }
 
 void MainFrame::ApplyWindowSettings()

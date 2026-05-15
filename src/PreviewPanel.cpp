@@ -1,5 +1,8 @@
 #include "PreviewPanel.h"
 #include <wx/filename.h>
+#ifndef GLANCE_USE_WEBVIEW
+#include <wx/html/htmprint.h>
+#endif
 #include <wx/sizer.h>
 
 namespace
@@ -13,6 +16,7 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
       m_webView(wxWebView::New(this, wxID_ANY)),
 #else
       m_htmlWindow(new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO)),
+      m_htmlPrinter(new wxHtmlEasyPrinting("Glance Markdown Editor", this)),
 #endif
       m_updateTimer(this)
 {
@@ -26,6 +30,13 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
 
     Bind(wxEVT_TIMER, &PreviewPanel::OnUpdateTimer, this, m_updateTimer.GetId());
     Clear();
+}
+
+PreviewPanel::~PreviewPanel()
+{
+#ifndef GLANCE_USE_WEBVIEW
+    delete m_htmlPrinter;
+#endif
 }
 
 void PreviewPanel::ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath)
@@ -55,6 +66,24 @@ wxString PreviewPanel::GetHtmlSource() const
     }
 
     return BuildHtmlPage(m_renderer.RenderDocument(m_pendingMarkdown, m_sourceFilePath));
+}
+
+bool PreviewPanel::PrintMarkdown(const wxString& markdown, const wxString& sourceFilePath, const wxString& title)
+{
+    m_pendingMarkdown = markdown;
+    m_sourceFilePath = sourceFilePath;
+    m_updateTimer.Stop();
+
+    const wxString html = GetHtmlSource();
+#ifdef GLANCE_USE_WEBVIEW
+    m_webView->SetPage(html, GetBaseUrl());
+    m_webView->Print();
+    return true;
+#else
+    m_htmlWindow->SetPage(html);
+    m_htmlPrinter->SetName(title.empty() ? "Glance Markdown Editor" : title);
+    return m_htmlPrinter->PrintText(html, GetBasePath());
+#endif
 }
 
 void PreviewPanel::OnUpdateTimer(wxTimerEvent& event)
@@ -135,6 +164,16 @@ hr { border: 0; border-top: 1px solid #d8dee6; margin: 1.5em 0; }
 )" + renderedBody + R"(
 </body>
 </html>)";
+}
+
+wxString PreviewPanel::GetBasePath() const
+{
+    if (m_sourceFilePath.empty())
+    {
+        return wxString();
+    }
+
+    return wxFileName(m_sourceFilePath).GetPath();
 }
 
 wxString PreviewPanel::GetBaseUrl() const

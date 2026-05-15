@@ -39,7 +39,7 @@ AboutDialog::AboutDialog(wxWindow* parent)
         "A portable desktop application for editing Markdown files.\n\n"
         "Built with wxWidgets " + wxString(wxVERSION_STRING) + "\n"
         "Language: C++17\n"
-        "License: Project license not specified";
+        "License: Project is licensed under the MIT license.";
 
     wxStaticText* body = new wxStaticText(this, wxID_ANY, details);
     wxButton* closeButton = new wxButton(this, wxID_OK, "OK");

@@ -37,6 +37,7 @@ Use:
 - `File > Close Tab` to close the current tab.
 
 When closing a modified tab, switching folders, or exiting the app, Glance asks whether to save changes.
+Document editing, insertion, saving, closing, preview export, and printing commands are disabled when no document is open.
 
 ## Preview
 
@@ -66,7 +67,6 @@ Available commands include:
 - Bold
 - Italic
 - Bold Italic
-- Underline
 - Strikethrough
 - Inline Code
 - Code Block
@@ -88,9 +88,6 @@ Use the `Insert` menu to add Markdown snippets:
 - Link
 - Image
 - Table
-- Code Block
-- Inline Code
-- Blockquote
 - Bullet List
 - Numbered List
 - Task List
@@ -98,11 +95,10 @@ Use the `Insert` menu to add Markdown snippets:
 - Date
 - Time
 - Date and Time
-- HTML Comment
-- Footnote
-- Table of Contents Marker
 
-The image command prompts for an image file and alt text. Glance inserts a relative path when the image is near the current Markdown file.
+The link command prompts for link text and URL. The image command prompts for an image file and alt text. Glance inserts a relative path when the image is near the current Markdown file. The table command asks how many columns to create.
+
+If text is selected, inserted snippets are placed before the selected text instead of replacing it.
 
 ## Keyboard Shortcuts
 

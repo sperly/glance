@@ -2,52 +2,53 @@
 
 This file provides guidance to agents when working with code in this repository.
 
-## Project Overview
-This is a C++ Markdown editor application built with wxWidgets and CMake. The application allows users to open folders, browse Markdown files, edit them in tabs, and view rendered previews side-by-side.
+## Setup & Development
 
-## Build System
-- Language: C++17 or newer
-- Framework: wxWidgets
-- Build System: CMake
-- Target Platforms: Linux, Windows, macOS
-
-## Key Commands
-- Build: `cmake -S . -B build && make -C build` (or `cmake --build build`)
-- Run: `./build/glance` (after building)
-- Command-line usage: `glance [folder_path]`
-
-## Architecture
-The application follows a component-based architecture with these key classes:
-- `GlanceApp` - wxWidgets application entry point
-- `MainFrame` - Main window, menus, status bar, splitters
-- `FileTreePanel` - Folder tree and Markdown file browsing
-- `EditorNotebook` - Manages editor tabs and open documents
-- `GlanceCtrl` - Wrapper around wxStyledTextCtrl
-- `PreviewPanel` - Renders and displays Markdown preview
-- `MarkdownRenderer` - Converts Markdown to HTML
-- `Document` - Represents one open Markdown document
-- `DocumentManager` - Tracks open documents and save/close logic
-
-## Code Style & Patterns
-- C++17 or newer with modern C++ practices
-- wxWidgets components used for UI elements
-- Three-pane layout: file tree, editor tabs, preview
-- File tree shows only Markdown-related files (.md, .markdown, .mdown, .mkd)
-- Editor tabs show unsaved changes with asterisk prefix
-- Preview updates with debounce (300-500ms) for performance
-- Markdown rendering uses GitHub-Flavored Markdown support
-- All file paths are resolved relative to the current Markdown file location
+- Build with CMake: `cmake -S . -B build && cmake --build build`
+- Run tests with CTest: `ctest --test-dir build --output-on-failure`
+- Use `cmake --build build` to rebuild after changes
 
 ## Testing
-- No specific test framework mentioned in documentation
-- Tests should be organized in a tests/ directory with CMakeLists.txt
-- Test files should be in same directory as source for proper test discovery
 
-## Critical Gotchas
-- Application must be built with CMake
-- wxWidgets components must be properly linked
-- Markdown rendering requires a Markdown parser (cmark-gfm recommended)
-- Preview pane requires wxWebView for HTML rendering
-- File paths in preview must be resolved relative to current file location
-- Editor tabs must track document modification state properly
-- Status bar must update caret position, selection, and document length
+- Core tests are implemented in `tests/core_tests.cpp` using wxWidgets unit testing approach
+- Tests use `wxInitializer` for wxWidgets initialization
+- Test files must be in same directory as source for CTest to work properly
+- Tests are run with CTest, not standard npm test commands
+
+## Architecture
+
+- This is a C++ desktop application using wxWidgets framework
+- Main application entry point is in `src/main.cpp` with `wxIMPLEMENT_APP(GlanceApp)`
+- Core components include: `GlanceApp`, `MainFrame`, `FileTreePanel`, `EditorNotebook`, `DocumentManager`, `MarkdownRenderer`
+- Uses C++17 standard with wxWidgets libraries (core, base, adv, aui, html, stc)
+- Markdown rendering uses custom implementation with regex-based parsing
+- Preview panel uses `wxWebView` for HTML rendering
+
+## Framework Quirks
+
+- Uses CMake build system, not npm/yarn
+- All source files are C++ (.cpp/.h) with wxWidgets UI components
+- Markdown rendering is custom implementation, not using external libraries
+- File paths are resolved using wxWidgets `wxFileName` class
+- Uses wxWidgets' `wxStyledTextCtrl` for text editing with syntax highlighting
+- Uses `wxWebView` for preview rendering with proper HTML template
+
+## Code Style
+
+- C++17 with modern C++ features
+- Uses wxWidgets naming conventions (camelCase for methods, PascalCase for classes)
+- All source files use UTF-8 encoding
+- Custom Markdown renderer uses regex patterns for parsing
+- File paths are normalized using wxWidgets path handling utilities
+- Uses `wxString` for all string handling, converting to/from std::string with `.utf8_string()`
+
+## Gotchas
+
+- Markdown rendering uses custom implementation with specific HTML output format
+- Preview synchronization uses debounce mechanism (300-500ms)
+- File tree only shows Markdown-related files (.md, .markdown, .mdown, .mkd)
+- Image paths in Markdown are resolved relative to the source file's directory
+- Task items in Markdown use specific HTML classes for styling (task, glance-strike)
+- All file operations use wxWidgets file handling utilities for cross-platform compatibility
+- Document management normalizes duplicate file paths using `wxFileName::GetFullPath()`
+- Test files must be in same directory as source for CTest to work properly

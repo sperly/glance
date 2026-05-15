@@ -217,7 +217,8 @@ std::string ResolveImagePaths(const std::string& html, const wxString& baseDirec
         }
         else
         {
-            wxFileName imagePath(baseDirectory, ToWxString(source));
+            wxFileName imagePath(ToWxString(source));
+            imagePath.MakeAbsolute(baseDirectory);
             imagePath.Normalize(wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE);
             resolved += "<img alt=\"" + alt + "\" src=\"file://" + ToStdString(imagePath.GetFullPath()) + "\">";
         }

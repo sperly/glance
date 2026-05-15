@@ -10,24 +10,32 @@
 #include <wx/panel.h>
 #include <wx/timer.h>
 
+#ifndef GLANCE_USE_WEBVIEW
+class wxHtmlEasyPrinting;
+#endif
+
 class PreviewPanel : public wxPanel
 {
 public:
     explicit PreviewPanel(wxWindow* parent);
+    ~PreviewPanel() override;
 
     void ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath);
     void Clear();
     wxString GetHtmlSource() const;
+    bool PrintMarkdown(const wxString& markdown, const wxString& sourceFilePath, const wxString& title);
 
 private:
     void OnUpdateTimer(wxTimerEvent& event);
     wxString BuildHtmlPage(const wxString& renderedBody) const;
+    wxString GetBasePath() const;
     wxString GetBaseUrl() const;
 
 #ifdef GLANCE_USE_WEBVIEW
     wxWebView* m_webView;
 #else
     wxHtmlWindow* m_htmlWindow;
+    wxHtmlEasyPrinting* m_htmlPrinter;
 #endif
     wxTimer m_updateTimer;
     MarkdownRenderer m_renderer;

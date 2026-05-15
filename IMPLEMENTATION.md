@@ -156,6 +156,19 @@ Following the incremental approach suggested in the project specification, we'll
    - [x] Document implementation details
    - [x] Create user documentation
 
+### Phase 9: Further refining
+**Goal**: Refine features
+
+1. **Refining User experience**
+   - [x] When no document is open no "Insert" or "Edit" menu items should be available. The same goes for "Save" menus.
+   - [x] When adding Link ("Insert"/"Link") there should also be a text field for link text.
+   - [x] Remove "Code Block", "Inline Code" and "Blockquote" from the "Insert" menu.
+   - [x] When some text is selected and an "Insert" function is called the thing that is inserted shall be inserted before the selected text and NOT replacing the selection.
+   - [x] Get a popup asking for how many columns when inserting a table.
+   - [x] Remove "HTML Comment", "Footnote" and "Table Of Contents" from "Insert" menu.
+   - [x] Remove "Underline" from "Format" menu.
+   - [x] Update "resources/help.md" and "README.md" files.
+
 ## Technical Requirements
 
 ### Core Components

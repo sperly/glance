@@ -61,6 +61,24 @@ void TestMarkdownRendererCoreFeatures()
     assert(html.Contains("class=\"glance-strike\""));
     assert(html.Contains("type=\"checkbox\" disabled checked"));
 }
+
+void TestMarkdownRendererResolvesNestedRelativeImagePaths()
+{
+    const wxString sourceFilePath = wxFileName::CreateTempFileName("glance-renderer-test");
+    assert(!sourceFilePath.empty());
+
+    MarkdownRenderer renderer;
+    const wxString html = renderer.RenderDocument("![Alt](assets/images/photo.png)", sourceFilePath);
+
+    wxFileName expectedPath("assets/images/photo.png");
+    expectedPath.MakeAbsolute(wxFileName(sourceFilePath).GetPath());
+    expectedPath.Normalize(wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE);
+
+    assert(html.Contains("<img alt=\"Alt\""));
+    assert(html.Contains("src=\"file://" + expectedPath.GetFullPath() + "\""));
+
+    wxRemoveFile(sourceFilePath);
+}
 }
 
 int main()
@@ -71,5 +89,6 @@ int main()
     TestDocumentSaveLoad();
     TestDocumentManagerNormalizesDuplicatePaths();
     TestMarkdownRendererCoreFeatures();
+    TestMarkdownRendererResolvesNestedRelativeImagePaths();
     return 0;
 }

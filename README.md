@@ -1,6 +1,13 @@
 # Glance Markdown Editor
+![glance-logo](resources/glance-logo-small.png)
+
+Located at [Glance at Github](https://github.com/sperly/glance)
 
 A portable desktop application for editing Markdown files, built with wxWidgets.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Project Structure
 
@@ -10,8 +17,8 @@ glance/
 ├── README.md
 ├── resources/
 │   ├── help.md
-│   └── glance_icon.png
-│   └── glance_logo.png
+│   └── glance-icon.png
+│   └── glance-logo.png
 ├── src/
 │   ├── main.cpp
 │   ├── GlanceApp.h/cpp
@@ -25,55 +32,10 @@ glance/
 │   ├── DocumentManager.h/cpp
 │   ├── HelpDialog.h/cpp
 │   ├── AboutDialog.h/cpp
-│   └── CommandLineOptions.h/cpp
+│   └── SettingsManager.h/cpp
 └── tests/
-    └── CMakeLists.txt
+    └── core_tests.cpp
 ```
-
-## Implementation Status
-
-### Phase 1: Basic Application Structure
-- [x] Project structure created
-- [x] CMakeLists.txt configured
-- [x] Main application entry point
-- [x] GlanceApp class implemented
-- [x] MainFrame class with menu bar and status bar
-- [x] Basic menu items (File, Help)
-
-### Phase 2: Folder and File Tree Browser
-- [x] Folder opening functionality
-- [x] File tree panel implementation
-- [x] Integration with main window
-
-### Phase 3: Tabbed Editor Implementation
-- [x] Editor notebook implementation
-- [x] Editor control wrapper
-- [x] Document management system
-
-### Phase 4: File Operations
-- [x] New file functionality
-- [x] File opening functionality
-- [x] Save functionality
-- [x] File closing handling
-
-### Phase 5: Markdown Preview
-- [x] Preview panel implementation
-- [x] Markdown rendering system
-- [x] Preview synchronization
-
-### Phase 6: Formatting and Insertion Tools
-- [x] Format menu implementation
-- [x] Insert menu implementation
-- [x] Keyboard shortcuts
-
-### Phase 7: Help and About System
-- [x] Help system implementation
-- [x] About dialog implementation
-
-### Phase 8: Polish and Advanced Features
-- [x] Error handling
-- [x] User experience improvements
-- [x] Testing and documentation
 
 ## Building and Testing
 
@@ -90,11 +52,147 @@ Run the lightweight core test suite with CTest:
 ctest --test-dir build --output-on-failure
 ```
 
-## User Notes
+## Features
 
-- Create a document with **File > New File...**.
-- Open a workspace with **File > Open Folder...** or a single Markdown file with **File > Open File...**.
-- Recently opened files and folders are available from the **File** menu.
-- Window size, splitter positions, and recent items are restored between launches.
-- When an open document changes on disk while Glance is in the background, Glance prompts before reloading it.
-- Use **Help > Save Preview HTML...** to export the current preview as raw HTML.
+Glance is a portable Markdown editor with a folder tree, tabbed editor, and rendered preview.
+
+### Opening Folders
+
+Use `File > Open Folder` to choose a folder. Glance scans the folder recursively and shows Markdown files in the left tree.
+
+Supported file types:
+
+- `.md`
+- `.markdown`
+- `.mdown`
+- `.mkd`
+
+Hidden files and folders are skipped by default.
+
+### Opening Files
+
+Open a file by double-clicking it in the file tree, or use `File > Open File`. If the file is already open, Glance switches to the existing tab.
+
+You can also launch Glance with a folder or Markdown file path:
+
+```text
+glance /path/to/folder
+glance /path/to/file.md
+```
+
+### Editing And Saving
+
+Each Markdown file opens in its own tab. Modified files show an asterisk before the tab name.
+
+Use:
+
+- `File > Save File` to save the current tab.
+- `File > Save All` to save all modified tabs.
+- `File > Close Tab` to close the current tab.
+
+When closing a modified tab, switching folders, or exiting the app, Glance asks whether to save changes.
+Document editing, insertion, saving, closing, preview export, and printing commands are disabled when no document is open.
+
+### Preview
+
+The right pane shows a rendered preview of the active Markdown tab. The preview updates automatically after a short debounce when you type.
+
+The preview supports common Markdown structures:
+
+- Headings
+- Paragraphs
+- Emphasis and strong text
+- Strikethrough
+- Lists and task lists
+- Code blocks and inline code
+- Blockquotes
+- Tables
+- Links and images
+- Horizontal rules
+
+Image paths are resolved relative to the Markdown file location when possible.
+
+### Formatting Commands
+
+Use the `Format` menu to transform selected text or insert placeholders at the caret.
+
+Available commands include:
+
+- Bold
+- Italic
+- Bold Italic
+- Strikethrough
+- Inline Code
+- Code Block
+- Blockquote
+- Heading 1 through Heading 6
+- Bullet List
+- Numbered List
+- Task List
+- Completed Task
+- Horizontal Rule
+- Clear Formatting
+
+Line-based commands operate on the current line or selected lines.
+
+### Insert Commands
+
+Use the `Insert` menu to add Markdown snippets:
+
+- Link
+- Image
+- Table
+- Bullet List
+- Numbered List
+- Task List
+- Horizontal Rule
+- Date
+- Time
+- Date and Time
+
+The link command prompts for link text and URL. The image command prompts for an image file and alt text. Glance inserts a relative path when the image is near the current Markdown file. The table command asks how many columns to create.
+
+If text is selected, inserted snippets are placed before the selected text instead of replacing it.
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+O` | Open File |
+| `Ctrl+Shift+O` | Open Folder |
+| `Ctrl+S` | Save File |
+| `Ctrl+Shift+S` | Save All |
+| `Ctrl+W` | Close Tab |
+| `Ctrl+P` | Print |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Y` | Redo |
+| `Ctrl+X` | Cut |
+| `Ctrl+C` | Copy |
+| `Ctrl+V` | Paste |
+| `Ctrl+A` | Select All |
+| `Ctrl+B` | Bold |
+| `Ctrl+I` | Italic |
+| `Ctrl+K` | Insert Link |
+| `F1` | Help |
+
+### Saving Preview HTML
+
+Use `Help > Save Preview HTML` to save the raw HTML generated for the current preview.
+
+This is useful for debugging rendering issues or exporting a lightweight preview document.
+
+### Printing
+
+Use `File > Print` to print the raw Markdown text. Rendered preview printing can be added later.
+
+### Troubleshooting
+
+If preview styling appears limited, your system may be using the `wxHtmlWindow` fallback. Installing the wxWidgets WebView development package enables a stronger HTML engine where available.
+
+On Debian or Ubuntu, install:
+
+```text
+sudo apt install libwxgtk-webview3.2-dev
+```
+
+Then rerun CMake and rebuild the application.
