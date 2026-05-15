@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(glance)
+project(glance VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,7 +53,14 @@ add_executable(glance
 target_link_libraries(glance ${wxWidgets_LIBRARIES})
 glance_configure_webview(glance)
 
-target_compile_definitions(glance PRIVATE GLANCE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(glance
+    PRIVATE
+        GLANCE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+        GLANCE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        GLANCE_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        GLANCE_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+        GLANCE_VERSION_STRING="${PROJECT_VERSION}"
+)
 
 # Include directories
 target_include_directories(glance PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})

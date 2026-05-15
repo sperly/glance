@@ -9,6 +9,10 @@
 #include <wx/stattext.h>
 #include <wx/version.h>
 
+#ifndef GLANCE_VERSION_STRING
+#define GLANCE_VERSION_STRING "0.0.0"
+#endif
+
 AboutDialog::AboutDialog(wxWindow* parent)
     : wxDialog(parent,
                wxID_ANY,
@@ -35,7 +39,7 @@ AboutDialog::AboutDialog(wxWindow* parent)
     title->SetFont(titleFont);
 
     const wxString details =
-        "Version: 0.1.0\n"
+        "Version: " + wxString::FromUTF8(GLANCE_VERSION_STRING) + "\n"
         "A portable desktop application for editing Markdown files.\n\n"
         "Built with wxWidgets " + wxString(wxVERSION_STRING) + "\n"
         "Language: C++17\n"
