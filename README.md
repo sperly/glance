@@ -183,7 +183,7 @@ This is useful for debugging rendering issues or exporting a lightweight preview
 
 ### Printing
 
-Use `File > Print` to print the raw Markdown text. Rendered preview printing can be added later.
+Use `File > Print` to print the rendered Markdown text.
 
 ### Troubleshooting
 
