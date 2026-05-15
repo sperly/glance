@@ -10,9 +10,7 @@
 #include <wx/panel.h>
 #include <wx/timer.h>
 
-#ifndef GLANCE_USE_WEBVIEW
 class wxHtmlEasyPrinting;
-#endif
 
 class PreviewPanel : public wxPanel
 {
@@ -35,8 +33,8 @@ private:
     wxWebView* m_webView;
 #else
     wxHtmlWindow* m_htmlWindow;
-    wxHtmlEasyPrinting* m_htmlPrinter;
 #endif
+    wxHtmlEasyPrinting* m_htmlPrinter;
     wxTimer m_updateTimer;
     MarkdownRenderer m_renderer;
     wxString m_pendingMarkdown;

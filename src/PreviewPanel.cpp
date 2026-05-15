@@ -1,8 +1,6 @@
 #include "PreviewPanel.h"
 #include <wx/filename.h>
-#ifndef GLANCE_USE_WEBVIEW
 #include <wx/html/htmprint.h>
-#endif
 #include <wx/sizer.h>
 
 namespace
@@ -16,8 +14,8 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
       m_webView(wxWebView::New(this, wxID_ANY)),
 #else
       m_htmlWindow(new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO)),
-      m_htmlPrinter(new wxHtmlEasyPrinting("Glance Markdown Editor", this)),
 #endif
+      m_htmlPrinter(new wxHtmlEasyPrinting("Glance Markdown Editor", this)),
       m_updateTimer(this)
 {
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
@@ -34,9 +32,7 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
 
 PreviewPanel::~PreviewPanel()
 {
-#ifndef GLANCE_USE_WEBVIEW
     delete m_htmlPrinter;
-#endif
 }
 
 void PreviewPanel::ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath)
@@ -77,13 +73,11 @@ bool PreviewPanel::PrintMarkdown(const wxString& markdown, const wxString& sourc
     const wxString html = GetHtmlSource();
 #ifdef GLANCE_USE_WEBVIEW
     m_webView->SetPage(html, GetBaseUrl());
-    m_webView->Print();
-    return true;
 #else
     m_htmlWindow->SetPage(html);
+#endif
     m_htmlPrinter->SetName(title.empty() ? "Glance Markdown Editor" : title);
     return m_htmlPrinter->PrintText(html, GetBasePath());
-#endif
 }
 
 void PreviewPanel::OnUpdateTimer(wxTimerEvent& event)

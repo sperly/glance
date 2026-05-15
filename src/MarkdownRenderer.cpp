@@ -229,6 +229,44 @@ std::string ResolveImagePaths(const std::string& html, const wxString& baseDirec
     resolved.append(searchStart, html.cend());
     return resolved;
 }
+
+std::string ProtectCodeSpans(const std::string& html, std::vector<std::string>* codeSpans)
+{
+    static const std::regex codePattern("`([^`]+)`");
+    std::string protectedHtml;
+    std::string::const_iterator searchStart = html.begin();
+    std::smatch match;
+
+    while (std::regex_search(searchStart, html.cend(), match, codePattern))
+    {
+        protectedHtml.append(searchStart, match[0].first);
+
+        const std::string placeholder = "\x1f" + std::to_string(codeSpans->size()) + "\x1f";
+        codeSpans->push_back("<code>" + match[1].str() + "</code>");
+        protectedHtml += placeholder;
+
+        searchStart = match[0].second;
+    }
+
+    protectedHtml.append(searchStart, html.cend());
+    return protectedHtml;
+}
+
+std::string RestoreCodeSpans(std::string html, const std::vector<std::string>& codeSpans)
+{
+    for (size_t i = 0; i < codeSpans.size(); ++i)
+    {
+        const std::string placeholder = "\x1f" + std::to_string(i) + "\x1f";
+        size_t position = 0;
+        while ((position = html.find(placeholder, position)) != std::string::npos)
+        {
+            html.replace(position, placeholder.length(), codeSpans[i]);
+            position += codeSpans[i].length();
+        }
+    }
+
+    return html;
+}
 }
 
 wxString MarkdownRenderer::RenderDocument(const wxString& markdown, const wxString& sourceFilePath) const
@@ -407,6 +445,8 @@ wxString MarkdownRenderer::RenderDocument(const wxString& markdown, const wxStri
 wxString MarkdownRenderer::RenderInline(const wxString& text, const wxString& baseDirectory) const
 {
     std::string html = EscapeHtml(ToStdString(text));
+    std::vector<std::string> codeSpans;
+    html = ProtectCodeSpans(html, &codeSpans);
 
     html = std::regex_replace(html,
                               std::regex("!\\[([^\\]]*)\\]\\(([^\\)]+)\\)"),
@@ -415,11 +455,11 @@ wxString MarkdownRenderer::RenderInline(const wxString& text, const wxString& ba
     html = std::regex_replace(html,
                               std::regex("\\[([^\\]]+)\\]\\(([^\\)]+)\\)"),
                               "<a href=\"$2\">$1</a>");
-    html = std::regex_replace(html, std::regex("`([^`]+)`"), "<code>$1</code>");
     html = std::regex_replace(html, std::regex("\\*\\*\\*([^*]+)\\*\\*\\*"), "<strong><em>$1</em></strong>");
     html = std::regex_replace(html, std::regex("\\*\\*([^*]+)\\*\\*"), "<strong>$1</strong>");
     html = std::regex_replace(html, std::regex("\\*([^*]+)\\*"), "<em>$1</em>");
     html = std::regex_replace(html, std::regex("~~([^~]+)~~"), "<span class=\"glance-strike\">$1</span>");
+    html = RestoreCodeSpans(std::move(html), codeSpans);
 
     return ToWxString(html);
 }
