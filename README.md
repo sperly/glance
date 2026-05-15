@@ -32,6 +32,9 @@ glance/
 │   ├── DocumentManager.h/cpp
 │   ├── HelpDialog.h/cpp
 │   ├── AboutDialog.h/cpp
+│   ├── DocumentSettingsDialog.h/cpp
+│   ├── MarkdownFlavor.h/cpp
+│   ├── MarkdownValidator.h/cpp
 │   └── SettingsManager.h/cpp
 └── tests/
     └── core_tests.cpp
@@ -57,6 +60,19 @@ Format the C++ sources with clang-format using the project Google-style configur
 ```sh
 cmake --build build --target format
 ```
+
+Check formatting without modifying files:
+
+```sh
+cmake --build build --target format-check
+```
+
+## Documentation
+
+Additional developer documentation lives in `docs/`:
+
+- [Codebase overview](docs/codebase-overview.md)
+- [Adding a Markdown flavor](docs/adding-markdown-flavor.md)
 
 ## Features
 
@@ -99,22 +115,33 @@ Use:
 When closing a modified tab, switching folders, or exiting the app, Glance asks whether to save changes.
 Document editing, insertion, saving, closing, preview export, and printing commands are disabled when no document is open.
 
+### Document Markdown Flavor
+
+Use `Document > Settings` to choose the Markdown flavor for the current document. Glance uses `GitHub Markdown` by default and also supports `Vanilla Markdown`.
+
+The selected flavor controls preview rendering, printing, preview HTML export, validation, and which Markdown formatting or insertion commands are available. Commands that do not apply to the current flavor are disabled.
+
+Use `Document > Validate Markdown` to check the current document against its selected flavor.
+
 ### Preview
 
 The right pane shows a rendered preview of the active Markdown tab. The preview updates automatically after a short debounce when you type.
 
-The preview supports common Markdown structures:
+In GitHub Markdown mode, the preview supports common Markdown structures:
 
 - Headings
 - Paragraphs
 - Emphasis and strong text
 - Strikethrough
+- Subscript and superscript
 - Lists and task lists
-- Code blocks and inline code
+- Fenced code blocks and inline code
 - Blockquotes
 - Tables
 - Links and images
 - Horizontal rules
+
+Vanilla Markdown mode supports the core Markdown subset without GitHub-specific extensions such as tables, task lists, strikethrough, subscript, and superscript.
 
 Image paths are resolved relative to the Markdown file location when possible.
 
@@ -128,6 +155,8 @@ Available commands include:
 - Italic
 - Bold Italic
 - Strikethrough
+- Subscript
+- Superscript
 - Inline Code
 - Code Block
 - Blockquote
@@ -140,6 +169,7 @@ Available commands include:
 - Clear Formatting
 
 Line-based commands operate on the current line or selected lines.
+Some commands are disabled when the current document flavor does not define the required Markdown tag.
 
 ### Insert Commands
 
@@ -189,7 +219,7 @@ This is useful for debugging rendering issues or exporting a lightweight preview
 
 ### Printing
 
-Use `File > Print` to print the rendered Markdown text.
+Use `File > Print` to print the rendered Markdown preview for the current document flavor.
 
 ### Troubleshooting
 
