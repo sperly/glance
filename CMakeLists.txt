@@ -53,7 +53,7 @@ include(${wxWidgets_USE_FILE})
 glance_configure_embedded_resources(GLANCE_EMBEDDED_RESOURCES_SOURCE)
 
 # Add executable
-add_executable(glance
+add_executable(glance WIN32
     ${GLANCE_APP_SOURCES}
     ${GLANCE_EMBEDDED_RESOURCES_SOURCE}
 )
