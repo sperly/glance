@@ -9,8 +9,12 @@ function(glance_add_core_tests)
         src/Document.h
         src/DocumentManager.cpp
         src/DocumentManager.h
+        src/MarkdownFlavor.cpp
+        src/MarkdownFlavor.h
         src/MarkdownRenderer.cpp
         src/MarkdownRenderer.h
+        src/MarkdownValidator.cpp
+        src/MarkdownValidator.h
     )
 
     target_link_libraries(glance_core_tests ${wxWidgets_LIBRARIES})

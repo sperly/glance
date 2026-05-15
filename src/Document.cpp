@@ -7,7 +7,9 @@
 #include <utility>
 
 Document::Document(wxString filePath)
-    : m_filePath(std::move(filePath)), m_modified(false) {}
+    : m_filePath(std::move(filePath)),
+      m_markdownFlavor(MarkdownFlavor::GitHub),
+      m_modified(false) {}
 
 const wxString& Document::GetFilePath() const { return m_filePath; }
 
@@ -17,9 +19,15 @@ wxString Document::GetFileName() const {
 
 const wxString& Document::GetContent() const { return m_content; }
 
+MarkdownFlavor Document::GetMarkdownFlavor() const { return m_markdownFlavor; }
+
 bool Document::IsModified() const { return m_modified; }
 
 void Document::SetContent(const wxString& content) { m_content = content; }
+
+void Document::SetMarkdownFlavor(MarkdownFlavor flavor) {
+  m_markdownFlavor = flavor;
+}
 
 void Document::SetModified(bool modified) { m_modified = modified; }
 

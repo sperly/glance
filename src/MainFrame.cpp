@@ -10,12 +10,17 @@
 #include <wx/numdlg.h>
 #include <wx/textdlg.h>
 
+#include <vector>
+
 #include "AboutDialog.h"
 #include "Document.h"
+#include "DocumentSettingsDialog.h"
 #include "EditorNotebook.h"
 #include "EmbeddedResources.h"
 #include "FileTreePanel.h"
 #include "HelpDialog.h"
+#include "MarkdownFlavor.h"
+#include "MarkdownValidator.h"
 #include "PreviewPanel.h"
 
 namespace {
@@ -29,6 +34,8 @@ enum {
   ID_FORMAT_BOLD_ITALIC,
   ID_FORMAT_UNDERLINE,
   ID_FORMAT_STRIKETHROUGH,
+  ID_FORMAT_SUBSCRIPT,
+  ID_FORMAT_SUPERSCRIPT,
   ID_FORMAT_INLINE_CODE,
   ID_FORMAT_CODE_BLOCK,
   ID_FORMAT_BLOCKQUOTE,
@@ -60,6 +67,8 @@ enum {
   ID_INSERT_HTML_COMMENT,
   ID_INSERT_FOOTNOTE,
   ID_INSERT_TOC,
+  ID_DOCUMENT_SETTINGS,
+  ID_DOCUMENT_VALIDATE,
   ID_HELP_SHOW_HELP,
   ID_HELP_SAVE_PREVIEW_HTML,
   ID_RECENT_FILE_BASE,
@@ -79,52 +88,167 @@ wxString ToMarkdownPath(wxString path) {
   path.Replace("\\", "/");
   return path;
 }
+
+struct MarkdownMenuCommand {
+  int menuId;
+  MarkdownCommand command;
+};
+
+bool GetRequiredTagForMarkdownCommand(MarkdownCommand command,
+                                      MarkdownTag* tag) {
+  switch (command) {
+    case MarkdownCommand::Bold:
+      *tag = MarkdownTag::Bold;
+      return true;
+    case MarkdownCommand::Italic:
+      *tag = MarkdownTag::Italic;
+      return true;
+    case MarkdownCommand::BoldItalic:
+      *tag = MarkdownTag::BoldItalic;
+      return true;
+    case MarkdownCommand::Strikethrough:
+      *tag = MarkdownTag::Strikethrough;
+      return true;
+    case MarkdownCommand::Subscript:
+      *tag = MarkdownTag::Subscript;
+      return true;
+    case MarkdownCommand::Superscript:
+      *tag = MarkdownTag::Superscript;
+      return true;
+    case MarkdownCommand::InlineCode:
+      *tag = MarkdownTag::InlineCode;
+      return true;
+    case MarkdownCommand::CodeBlock:
+      *tag = MarkdownTag::FencedCodeBlock;
+      return true;
+    case MarkdownCommand::Blockquote:
+      *tag = MarkdownTag::Blockquote;
+      return true;
+    case MarkdownCommand::Heading1:
+    case MarkdownCommand::Heading2:
+    case MarkdownCommand::Heading3:
+    case MarkdownCommand::Heading4:
+    case MarkdownCommand::Heading5:
+    case MarkdownCommand::Heading6:
+      *tag = MarkdownTag::Heading;
+      return true;
+    case MarkdownCommand::BulletList:
+      *tag = MarkdownTag::UnorderedList;
+      return true;
+    case MarkdownCommand::NumberedList:
+      *tag = MarkdownTag::OrderedList;
+      return true;
+    case MarkdownCommand::TaskList:
+    case MarkdownCommand::CompletedTask:
+      *tag = MarkdownTag::TaskListItem;
+      return true;
+    case MarkdownCommand::HorizontalRule:
+      *tag = MarkdownTag::HorizontalRule;
+      return true;
+    case MarkdownCommand::Link:
+      *tag = MarkdownTag::Link;
+      return true;
+    case MarkdownCommand::Image:
+      *tag = MarkdownTag::Image;
+      return true;
+    case MarkdownCommand::Table:
+      *tag = MarkdownTag::Table;
+      return true;
+    default:
+      return false;
+  }
+}
+
+const std::vector<MarkdownMenuCommand>& GetMarkdownMenuCommands() {
+  static const std::vector<MarkdownMenuCommand> commands = {
+      {ID_FORMAT_BOLD, MarkdownCommand::Bold},
+      {ID_FORMAT_ITALIC, MarkdownCommand::Italic},
+      {ID_FORMAT_BOLD_ITALIC, MarkdownCommand::BoldItalic},
+      {ID_FORMAT_STRIKETHROUGH, MarkdownCommand::Strikethrough},
+      {ID_FORMAT_SUBSCRIPT, MarkdownCommand::Subscript},
+      {ID_FORMAT_SUPERSCRIPT, MarkdownCommand::Superscript},
+      {ID_FORMAT_INLINE_CODE, MarkdownCommand::InlineCode},
+      {ID_FORMAT_CODE_BLOCK, MarkdownCommand::CodeBlock},
+      {ID_FORMAT_BLOCKQUOTE, MarkdownCommand::Blockquote},
+      {ID_FORMAT_HEADING_1, MarkdownCommand::Heading1},
+      {ID_FORMAT_HEADING_2, MarkdownCommand::Heading2},
+      {ID_FORMAT_HEADING_3, MarkdownCommand::Heading3},
+      {ID_FORMAT_HEADING_4, MarkdownCommand::Heading4},
+      {ID_FORMAT_HEADING_5, MarkdownCommand::Heading5},
+      {ID_FORMAT_HEADING_6, MarkdownCommand::Heading6},
+      {ID_FORMAT_BULLET_LIST, MarkdownCommand::BulletList},
+      {ID_FORMAT_NUMBERED_LIST, MarkdownCommand::NumberedList},
+      {ID_FORMAT_TASK_LIST, MarkdownCommand::TaskList},
+      {ID_FORMAT_COMPLETED_TASK, MarkdownCommand::CompletedTask},
+      {ID_FORMAT_HORIZONTAL_RULE, MarkdownCommand::HorizontalRule},
+      {ID_INSERT_LINK, MarkdownCommand::Link},
+      {ID_INSERT_IMAGE, MarkdownCommand::Image},
+      {ID_INSERT_TABLE, MarkdownCommand::Table},
+      {ID_INSERT_BULLET_LIST, MarkdownCommand::BulletList},
+      {ID_INSERT_NUMBERED_LIST, MarkdownCommand::NumberedList},
+      {ID_INSERT_TASK_LIST, MarkdownCommand::TaskList},
+      {ID_INSERT_HORIZONTAL_RULE, MarkdownCommand::HorizontalRule},
+  };
+
+  return commands;
+}
 }  // namespace
 
-wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(ID_NEW_FILE,
-                                                 MainFrame::OnFileNewFile)
-    EVT_MENU(ID_OPEN_FOLDER, MainFrame::OnFileOpenFolder) EVT_MENU(
-        wxID_OPEN, MainFrame::OnFileOpenFile) EVT_MENU(wxID_SAVE,
-                                                       MainFrame::OnFileSave)
-        EVT_MENU(ID_SAVE_ALL, MainFrame::OnFileSaveAll) EVT_MENU(
-            ID_CLOSE_TAB,
-            MainFrame::OnFileCloseTab) EVT_MENU(wxID_PRINT,
-                                                MainFrame::OnFilePrint)
-            EVT_MENU(wxID_EXIT, MainFrame::OnFileExit) EVT_MENU_RANGE(
-                ID_RECENT_FILE_BASE, ID_RECENT_FILE_LAST,
-                MainFrame::OnRecentFile) EVT_MENU_RANGE(ID_RECENT_FOLDER_BASE,
-                                                        ID_RECENT_FOLDER_LAST,
-                                                        MainFrame::
-                                                            OnRecentFolder)
-                EVT_MENU(ID_CLEAR_RECENT_ITEMS,
-                         MainFrame::OnClearRecentItems) EVT_MENU(wxID_UNDO,
-                                                                 MainFrame::
-                                                                     OnEditUndo)
-                    EVT_MENU(wxID_REDO, MainFrame::OnEditRedo) EVT_MENU(
-                        wxID_CUT,
-                        MainFrame::OnEditCut) EVT_MENU(wxID_COPY,
-                                                       MainFrame::OnEditCopy)
-                        EVT_MENU(wxID_PASTE, MainFrame::OnEditPaste) EVT_MENU(
-                            wxID_SELECTALL, MainFrame::OnEditSelectAll)
-                            EVT_MENU_RANGE(ID_FORMAT_BOLD,
-                                           ID_FORMAT_CLEAR_FORMATTING,
-                                           MainFrame::OnFormatCommand)
-                                EVT_MENU_RANGE(ID_INSERT_LINK, ID_INSERT_TOC,
-                                               MainFrame::OnInsertCommand)
-                                    EVT_MENU(ID_HELP_SHOW_HELP,
-                                             MainFrame::OnHelpShowHelp)
-                                        EVT_MENU(
-                                            ID_HELP_SAVE_PREVIEW_HTML,
-                                            MainFrame::OnHelpSavePreviewHtml)
-                                            EVT_MENU(wxID_ABOUT,
-                                                     MainFrame::OnHelpAbout)
-                                                EVT_CLOSE(MainFrame::OnClose)
-                                                    EVT_ACTIVATE(
-                                                        MainFrame::OnActivate)
-                                                        wxEND_EVENT_TABLE()
-
+wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
+    ID_NEW_FILE, MainFrame::OnFileNewFile) EVT_MENU(ID_OPEN_FOLDER,
+                                                    MainFrame::OnFileOpenFolder)
+    EVT_MENU(wxID_OPEN, MainFrame::OnFileOpenFile) EVT_MENU(
+        wxID_SAVE,
+        MainFrame::
+            OnFileSave) EVT_MENU(ID_SAVE_ALL,
+                                 MainFrame::
+                                     OnFileSaveAll) EVT_MENU(ID_CLOSE_TAB,
+                                                             MainFrame::
+                                                                 OnFileCloseTab)
+        EVT_MENU(wxID_PRINT, MainFrame::OnFilePrint) EVT_MENU(
+            wxID_EXIT,
+            MainFrame::OnFileExit) EVT_MENU_RANGE(ID_RECENT_FILE_BASE,
+                                                  ID_RECENT_FILE_LAST,
+                                                  MainFrame::OnRecentFile)
+            EVT_MENU_RANGE(
+                ID_RECENT_FOLDER_BASE, ID_RECENT_FOLDER_LAST,
+                MainFrame::OnRecentFolder) EVT_MENU(ID_CLEAR_RECENT_ITEMS,
+                                                    MainFrame::
+                                                        OnClearRecentItems)
+                EVT_MENU(wxID_UNDO, MainFrame::OnEditUndo) EVT_MENU(
+                    wxID_REDO,
+                    MainFrame::OnEditRedo) EVT_MENU(wxID_CUT,
+                                                    MainFrame::OnEditCut)
+                    EVT_MENU(wxID_COPY, MainFrame::OnEditCopy) EVT_MENU(
+                        wxID_PASTE,
+                        MainFrame::OnEditPaste) EVT_MENU(wxID_SELECTALL,
+                                                         MainFrame::
+                                                             OnEditSelectAll)
+                        EVT_MENU_RANGE(ID_FORMAT_BOLD,
+                                       ID_FORMAT_CLEAR_FORMATTING,
+                                       MainFrame::OnFormatCommand)
+                            EVT_MENU_RANGE(ID_INSERT_LINK, ID_INSERT_TOC,
+                                           MainFrame::OnInsertCommand)
+                                EVT_MENU(ID_DOCUMENT_SETTINGS,
+                                         MainFrame::OnDocumentSettings)
+                                    EVT_MENU(ID_DOCUMENT_VALIDATE,
+                                             MainFrame::OnDocumentValidate)
+                                        EVT_MENU(ID_HELP_SHOW_HELP,
+                                                 MainFrame::OnHelpShowHelp)
+                                            EVT_MENU(ID_HELP_SAVE_PREVIEW_HTML,
+                                                     MainFrame::
+                                                         OnHelpSavePreviewHtml)
+                                                EVT_MENU(wxID_ABOUT,
+                                                         MainFrame::OnHelpAbout)
+                                                    EVT_CLOSE(
+                                                        MainFrame::OnClose)
+                                                        EVT_ACTIVATE(
                                                             MainFrame::
-                                                                MainFrame()
+                                                                OnActivate)
+                                                            wxEND_EVENT_TABLE()
+
+                                                                MainFrame::
+                                                                    MainFrame()
     : wxFrame(nullptr, wxID_ANY, "Glance Markdown Editor", wxDefaultPosition,
               wxSize(1000, 700)),
       m_fileTreePanel(nullptr),
@@ -207,6 +331,10 @@ void MainFrame::CreateMenuBar() {
                      "Wrap selection with bold italic Markdown");
   formatMenu->Append(ID_FORMAT_STRIKETHROUGH, "&Strikethrough",
                      "Wrap selection with strikethrough Markdown");
+  formatMenu->Append(ID_FORMAT_SUBSCRIPT, "S&ubscript",
+                     "Wrap selection with subscript Markdown");
+  formatMenu->Append(ID_FORMAT_SUPERSCRIPT, "Su&perscript",
+                     "Wrap selection with superscript Markdown");
   formatMenu->Append(ID_FORMAT_INLINE_CODE, "Inline &Code\tCtrl+`",
                      "Wrap selection with inline code markers");
   formatMenu->Append(ID_FORMAT_CODE_BLOCK, "Code &Block",
@@ -248,6 +376,14 @@ void MainFrame::CreateMenuBar() {
   insertMenu->Append(ID_INSERT_TIME, "T&ime");
   insertMenu->Append(ID_INSERT_DATE_TIME, "Date and Ti&me");
 
+  // Document menu
+  wxMenu* documentMenu = new wxMenu();
+  documentMenu->Append(ID_DOCUMENT_SETTINGS, "&Settings...",
+                       "Choose settings for the current document");
+  documentMenu->Append(ID_DOCUMENT_VALIDATE, "&Validate Markdown",
+                       "Validate the current document against its Markdown "
+                       "flavor");
+
   // Help menu
   wxMenu* helpMenu = new wxMenu();
   helpMenu->Append(ID_HELP_SHOW_HELP, "&Help\tF1",
@@ -261,6 +397,7 @@ void MainFrame::CreateMenuBar() {
   menuBar->Append(editMenu, "&Edit");
   menuBar->Append(formatMenu, "F&ormat");
   menuBar->Append(insertMenu, "&Insert");
+  menuBar->Append(documentMenu, "&Document");
   menuBar->Append(helpMenu, "&Help");
 
   SetMenuBar(menuBar);
@@ -334,12 +471,15 @@ bool MainFrame::OpenFile(const wxString& filePath) {
   }
 
   wxString errorMessage;
-  if (!m_editorNotebook->OpenFile(filePath, &errorMessage)) {
+  Document* document = m_editorNotebook->OpenFile(filePath, &errorMessage);
+  if (!document) {
     wxMessageBox(errorMessage, "Open Failed", wxOK | wxICON_ERROR, this);
     SetStatusText("Failed to open file: " + filePath, 0);
     return false;
   }
 
+  document->SetMarkdownFlavor(
+      m_settingsManager.LoadDocumentMarkdownFlavor(filePath));
   SetStatusText("Opened file: " + filePath, 0);
   AddRecentFile(filePath);
   UpdatePreview();
@@ -423,9 +563,9 @@ void MainFrame::OnFilePrint(wxCommandEvent& event) {
     return;
   }
 
-  if (!m_previewPanel->PrintMarkdown(document->GetContent(),
-                                     document->GetFilePath(),
-                                     document->GetFileName())) {
+  if (!m_previewPanel->PrintMarkdown(
+          document->GetContent(), document->GetFilePath(),
+          document->GetFileName(), document->GetMarkdownFlavor())) {
     SetStatusText("Print cancelled or failed", 0);
     return;
   }
@@ -489,6 +629,12 @@ void MainFrame::OnFormatCommand(wxCommandEvent& event) {
       break;
     case ID_FORMAT_STRIKETHROUGH:
       ExecuteMarkdownCommand(MarkdownCommand::Strikethrough);
+      break;
+    case ID_FORMAT_SUBSCRIPT:
+      ExecuteMarkdownCommand(MarkdownCommand::Subscript);
+      break;
+    case ID_FORMAT_SUPERSCRIPT:
+      ExecuteMarkdownCommand(MarkdownCommand::Superscript);
       break;
     case ID_FORMAT_INLINE_CODE:
       ExecuteMarkdownCommand(MarkdownCommand::InlineCode);
@@ -644,6 +790,40 @@ void MainFrame::OnInsertCommand(wxCommandEvent& event) {
   }
 }
 
+void MainFrame::OnDocumentSettings(wxCommandEvent& event) {
+  Document* document = m_editorNotebook->GetCurrentDocument();
+  if (!document) {
+    wxMessageBox("No document is open.", "Document Settings",
+                 wxOK | wxICON_INFORMATION, this);
+    return;
+  }
+
+  DocumentSettingsDialog dialog(this, document->GetMarkdownFlavor());
+  if (dialog.ShowModal() != wxID_OK) {
+    return;
+  }
+
+  const MarkdownFlavor selectedFlavor = dialog.GetSelectedFlavor();
+  document->SetMarkdownFlavor(selectedFlavor);
+  m_settingsManager.SaveDocumentMarkdownFlavor(document->GetFilePath(),
+                                               selectedFlavor);
+  SetStatusText(
+      "Markdown flavor: " + MarkdownFlavorToDisplayName(selectedFlavor), 0);
+  UpdateDocumentCommandState();
+  UpdatePreview();
+}
+
+void MainFrame::OnDocumentValidate(wxCommandEvent& event) {
+  Document* document = m_editorNotebook->GetCurrentDocument();
+  if (!document) {
+    wxMessageBox("No document is open.", "Validate Markdown",
+                 wxOK | wxICON_INFORMATION, this);
+    return;
+  }
+
+  wxMessageBox(FormatValidationResults(), "Validate Markdown", wxOK, this);
+}
+
 void MainFrame::OnHelpSavePreviewHtml(wxCommandEvent& event) {
   if (!m_editorNotebook->GetCurrentDocument()) {
     wxMessageBox("Open a Markdown document before saving preview HTML.",
@@ -737,8 +917,47 @@ void MainFrame::UpdatePreview() {
     return;
   }
 
-  m_previewPanel->ShowMarkdown(m_editorNotebook->GetCurrentContent(),
-                               m_editorNotebook->GetCurrentFilePath());
+  m_previewPanel->ShowMarkdown(
+      m_editorNotebook->GetCurrentContent(),
+      m_editorNotebook->GetCurrentFilePath(),
+      m_editorNotebook->GetCurrentDocument()->GetMarkdownFlavor());
+}
+
+wxString MainFrame::FormatValidationResults() const {
+  Document* document = m_editorNotebook->GetCurrentDocument();
+  if (!document) {
+    return "No document is open.";
+  }
+
+  MarkdownValidator validator;
+  const std::vector<MarkdownDiagnostic> diagnostics = validator.Validate(
+      m_editorNotebook->GetCurrentContent(), document->GetMarkdownFlavor());
+  const wxString flavorName =
+      MarkdownFlavorToDisplayName(document->GetMarkdownFlavor());
+
+  if (diagnostics.empty()) {
+    return "No validation issues found for " + flavorName + ".";
+  }
+
+  wxString message =
+      wxString::Format("%zu validation issue(s) found for %s:\n\n",
+                       diagnostics.size(), flavorName.c_str());
+  const size_t maxShown = 25;
+  for (size_t i = 0; i < diagnostics.size() && i < maxShown; ++i) {
+    const MarkdownDiagnostic& diagnostic = diagnostics[i];
+    const wxString severity =
+        diagnostic.severity == MarkdownDiagnosticSeverity::Error ? "Error"
+                                                                 : "Warning";
+    message += wxString::Format("Line %zu: %s: %s\n", diagnostic.line,
+                                severity.c_str(), diagnostic.message.c_str());
+  }
+
+  if (diagnostics.size() > maxShown) {
+    message += wxString::Format("\n%zu more issue(s) not shown.",
+                                diagnostics.size() - maxShown);
+  }
+
+  return message;
 }
 
 bool MainFrame::CreateNewFile(const wxString& filePath) {
@@ -792,6 +1011,11 @@ bool MainFrame::CreateNewFile(const wxString& filePath) {
 bool MainFrame::ExecuteMarkdownCommand(MarkdownCommand command,
                                        const wxString& argument,
                                        const wxString& secondaryArgument) {
+  if (!IsMarkdownCommandAllowed(command)) {
+    SetStatusText("Command is not available for this Markdown flavor", 0);
+    return false;
+  }
+
   if (!m_editorNotebook->ExecuteMarkdownCommand(command, argument,
                                                 secondaryArgument)) {
     SetStatusText("No document is open", 0);
@@ -800,6 +1024,23 @@ bool MainFrame::ExecuteMarkdownCommand(MarkdownCommand command,
 
   UpdatePreview();
   return true;
+}
+
+bool MainFrame::IsMarkdownCommandAllowed(MarkdownCommand command) const {
+  Document* document =
+      m_editorNotebook ? m_editorNotebook->GetCurrentDocument() : nullptr;
+  if (!document) {
+    return false;
+  }
+
+  MarkdownTag requiredTag;
+  if (!GetRequiredTagForMarkdownCommand(command, &requiredTag)) {
+    return true;
+  }
+
+  const MarkdownFlavorDefinition& definition =
+      GetMarkdownFlavorDefinition(document->GetMarkdownFlavor());
+  return MarkdownFlavorHasTag(definition, requiredTag);
 }
 
 wxString MainFrame::GetDefaultNewFileDirectory() const {
@@ -844,6 +1085,7 @@ void MainFrame::UpdateDocumentCommandState() {
   menuBar->EnableTop(1, hasDocument);  // Edit
   menuBar->EnableTop(2, hasDocument);  // Format
   menuBar->EnableTop(3, hasDocument);  // Insert
+  menuBar->EnableTop(4, hasDocument);  // Document
 
   const int documentCommandIds[] = {
       wxID_SAVE,
@@ -860,6 +1102,8 @@ void MainFrame::UpdateDocumentCommandState() {
       ID_FORMAT_ITALIC,
       ID_FORMAT_BOLD_ITALIC,
       ID_FORMAT_STRIKETHROUGH,
+      ID_FORMAT_SUBSCRIPT,
+      ID_FORMAT_SUPERSCRIPT,
       ID_FORMAT_INLINE_CODE,
       ID_FORMAT_CODE_BLOCK,
       ID_FORMAT_BLOCKQUOTE,
@@ -885,11 +1129,18 @@ void MainFrame::UpdateDocumentCommandState() {
       ID_INSERT_DATE,
       ID_INSERT_TIME,
       ID_INSERT_DATE_TIME,
+      ID_DOCUMENT_SETTINGS,
+      ID_DOCUMENT_VALIDATE,
       ID_HELP_SAVE_PREVIEW_HTML,
   };
 
   for (int id : documentCommandIds) {
     menuBar->Enable(id, hasDocument);
+  }
+
+  for (const MarkdownMenuCommand& command : GetMarkdownMenuCommands()) {
+    menuBar->Enable(command.menuId,
+                    hasDocument && IsMarkdownCommandAllowed(command.command));
   }
 }
 

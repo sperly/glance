@@ -17,7 +17,8 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
                                     wxDefaultSize, wxHW_SCROLLBAR_AUTO)),
 #endif
       m_htmlPrinter(new wxHtmlEasyPrinting("Glance Markdown Editor", this)),
-      m_updateTimer(this) {
+      m_updateTimer(this),
+      m_flavor(MarkdownFlavor::GitHub) {
   wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 #ifdef GLANCE_USE_WEBVIEW
   sizer->Add(m_webView, 1, wxEXPAND);
@@ -33,15 +34,18 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
 PreviewPanel::~PreviewPanel() { delete m_htmlPrinter; }
 
 void PreviewPanel::ShowMarkdown(const wxString& markdown,
-                                const wxString& sourceFilePath) {
+                                const wxString& sourceFilePath,
+                                MarkdownFlavor flavor) {
   m_pendingMarkdown = markdown;
   m_sourceFilePath = sourceFilePath;
+  m_flavor = flavor;
   m_updateTimer.StartOnce(PreviewDebounceMs);
 }
 
 void PreviewPanel::Clear() {
   m_pendingMarkdown.clear();
   m_sourceFilePath.clear();
+  m_flavor = MarkdownFlavor::GitHub;
   m_updateTimer.Stop();
 #ifdef GLANCE_USE_WEBVIEW
   m_webView->SetPage(BuildHtmlPage("<p class=\"empty\">No document open</p>"),
@@ -58,14 +62,15 @@ wxString PreviewPanel::GetHtmlSource() const {
   }
 
   return BuildHtmlPage(
-      m_renderer.RenderDocument(m_pendingMarkdown, m_sourceFilePath));
+      m_renderer.RenderDocument(m_pendingMarkdown, m_sourceFilePath, m_flavor));
 }
 
 bool PreviewPanel::PrintMarkdown(const wxString& markdown,
                                  const wxString& sourceFilePath,
-                                 const wxString& title) {
+                                 const wxString& title, MarkdownFlavor flavor) {
   m_pendingMarkdown = markdown;
   m_sourceFilePath = sourceFilePath;
+  m_flavor = flavor;
   m_updateTimer.Stop();
 
   const wxString html = GetHtmlSource();

@@ -58,6 +58,12 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
     case MarkdownCommand::Strikethrough:
       WrapSelection("~~", "~~", "struck text");
       break;
+    case MarkdownCommand::Subscript:
+      WrapSelection("~", "~", "lower text");
+      break;
+    case MarkdownCommand::Superscript:
+      WrapSelection("^", "^", "upper text");
+      break;
     case MarkdownCommand::InlineCode:
       WrapSelection("`", "`", "code");
       break;

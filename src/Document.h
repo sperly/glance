@@ -4,6 +4,8 @@
 #include <wx/datetime.h>
 #include <wx/string.h>
 
+#include "MarkdownFlavor.h"
+
 class Document {
  public:
   explicit Document(wxString filePath = wxString());
@@ -11,9 +13,11 @@ class Document {
   const wxString& GetFilePath() const;
   wxString GetFileName() const;
   const wxString& GetContent() const;
+  MarkdownFlavor GetMarkdownFlavor() const;
   bool IsModified() const;
 
   void SetContent(const wxString& content);
+  void SetMarkdownFlavor(MarkdownFlavor flavor);
   void SetModified(bool modified);
 
   bool Load(wxString* errorMessage = nullptr);
@@ -27,6 +31,7 @@ class Document {
   wxString m_filePath;
   wxString m_content;
   wxDateTime m_lastKnownModificationTime;
+  MarkdownFlavor m_markdownFlavor;
   bool m_modified;
 };
 

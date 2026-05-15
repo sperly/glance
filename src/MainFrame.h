@@ -44,6 +44,8 @@ class MainFrame : public wxFrame {
   void OnEditSelectAll(wxCommandEvent& event);
   void OnFormatCommand(wxCommandEvent& event);
   void OnInsertCommand(wxCommandEvent& event);
+  void OnDocumentSettings(wxCommandEvent& event);
+  void OnDocumentValidate(wxCommandEvent& event);
   void OnHelpShowHelp(wxCommandEvent& event);
   void OnHelpSavePreviewHtml(wxCommandEvent& event);
   void OnHelpAbout(wxCommandEvent& event);
@@ -56,10 +58,12 @@ class MainFrame : public wxFrame {
   void OnActivate(wxActivateEvent& event);
 
   void UpdatePreview();
+  wxString FormatValidationResults() const;
   bool CreateNewFile(const wxString& filePath);
   bool ExecuteMarkdownCommand(MarkdownCommand command,
                               const wxString& argument = wxString(),
                               const wxString& secondaryArgument = wxString());
+  bool IsMarkdownCommandAllowed(MarkdownCommand command) const;
   wxString GetDefaultNewFileDirectory() const;
   wxString MakeMarkdownImagePath(const wxString& imagePath) const;
   void UpdateDocumentCommandState();

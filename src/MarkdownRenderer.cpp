@@ -65,6 +65,38 @@ bool StartsWith(const std::string& value, const std::string& prefix) {
   return value.rfind(prefix, 0) == 0;
 }
 
+std::string ApplyTemplate(
+    std::string htmlTemplate,
+    const std::vector<std::pair<std::string, std::string>>& replacements) {
+  for (const auto& replacement : replacements) {
+    size_t position = 0;
+    while ((position = htmlTemplate.find(replacement.first, position)) !=
+           std::string::npos) {
+      htmlTemplate.replace(position, replacement.first.length(),
+                           replacement.second);
+      position += replacement.second.length();
+    }
+  }
+
+  return htmlTemplate;
+}
+
+bool MatchTag(const MarkdownFlavorDefinition& definition, MarkdownTag tag,
+              const std::string& value, std::smatch* match = nullptr) {
+  const MarkdownTagDefinition* tagDefinition =
+      FindMarkdownTagDefinition(definition, tag);
+  if (!tagDefinition) {
+    return false;
+  }
+
+  const std::regex pattern(tagDefinition->pattern);
+  if (match) {
+    return std::regex_match(value, *match, pattern);
+  }
+
+  return std::regex_match(value, pattern);
+}
+
 std::vector<std::string> SplitLines(const std::string& text) {
   std::vector<std::string> lines;
   std::stringstream stream(text);
@@ -122,48 +154,6 @@ bool IsTableSeparator(const std::string& line) {
   });
 }
 
-bool IsOrderedListItem(const std::string& line) {
-  static const std::regex orderedPattern("^\\s*\\d+\\.\\s+.+");
-  return std::regex_match(line, orderedPattern);
-}
-
-bool IsUnorderedListItem(const std::string& line) {
-  static const std::regex unorderedPattern("^\\s*[-*+]\\s+.+");
-  return std::regex_match(line, unorderedPattern);
-}
-
-std::string StripListMarker(const std::string& line) {
-  static const std::regex listMarker("^\\s*(?:[-*+]|\\d+\\.)\\s+");
-  return std::regex_replace(line, listMarker, "");
-}
-
-bool IsTaskItem(const std::string& text, bool* checked) {
-  if (StartsWith(text, "[ ] ")) {
-    *checked = false;
-    return true;
-  }
-  if (StartsWith(text, "[x] ") || StartsWith(text, "[X] ")) {
-    *checked = true;
-    return true;
-  }
-
-  return false;
-}
-
-int HeadingLevel(const std::string& line) {
-  int level = 0;
-  while (level < static_cast<int>(line.size()) && line[level] == '#') {
-    ++level;
-  }
-
-  if (level == 0 || level > 6 || level >= static_cast<int>(line.size()) ||
-      line[level] != ' ') {
-    return 0;
-  }
-
-  return level;
-}
-
 bool IsAbsoluteOrRemotePath(const std::string& path) {
   return path.find("://") != std::string::npos || StartsWith(path, "#") ||
          StartsWith(path, "/");
@@ -203,9 +193,10 @@ std::string ResolveImagePaths(const std::string& html,
   return resolved;
 }
 
-std::string ProtectCodeSpans(const std::string& html,
+std::string ProtectInlineTag(const std::string& html,
+                             const MarkdownTagDefinition& tagDefinition,
                              std::vector<std::string>* codeSpans) {
-  static const std::regex codePattern("`([^`]+)`");
+  const std::regex codePattern(tagDefinition.pattern);
   std::string protectedHtml;
   std::string::const_iterator searchStart = html.begin();
   std::smatch match;
@@ -215,7 +206,8 @@ std::string ProtectCodeSpans(const std::string& html,
 
     const std::string placeholder =
         "\x1f" + std::to_string(codeSpans->size()) + "\x1f";
-    codeSpans->push_back("<code>" + match[1].str() + "</code>");
+    codeSpans->push_back(std::regex_replace(match.str(), codePattern,
+                                            tagDefinition.htmlTemplate));
     protectedHtml += placeholder;
 
     searchStart = match[0].second;
@@ -223,6 +215,16 @@ std::string ProtectCodeSpans(const std::string& html,
 
   protectedHtml.append(searchStart, html.cend());
   return protectedHtml;
+}
+
+std::string ApplyInlineTag(const std::string& html,
+                           const MarkdownTagDefinition* tagDefinition) {
+  if (!tagDefinition) {
+    return html;
+  }
+
+  return std::regex_replace(html, std::regex(tagDefinition->pattern),
+                            tagDefinition->htmlTemplate);
 }
 
 std::string RestoreCodeSpans(std::string html,
@@ -240,8 +242,17 @@ std::string RestoreCodeSpans(std::string html,
 }
 }  // namespace
 
+wxString MarkdownRenderer::RenderDocument(const wxString& markdown,
+                                          const wxString& sourceFilePath,
+                                          MarkdownFlavor flavor) const {
+  const MarkdownFlavorDefinition& definition =
+      GetMarkdownFlavorDefinition(flavor);
+  return RenderDocument(markdown, sourceFilePath, definition);
+}
+
 wxString MarkdownRenderer::RenderDocument(
-    const wxString& markdown, const wxString& sourceFilePath) const {
+    const wxString& markdown, const wxString& sourceFilePath,
+    const MarkdownFlavorDefinition& definition) const {
   const std::vector<std::string> lines = SplitLines(ToStdString(markdown));
   wxString baseDirectory;
   if (!sourceFilePath.empty()) {
@@ -253,11 +264,22 @@ wxString MarkdownRenderer::RenderDocument(
   bool inCodeBlock = false;
   bool inUnorderedList = false;
   bool inOrderedList = false;
+  const MarkdownTagDefinition* fencedCodeBlockRule =
+      FindMarkdownTagDefinition(definition, MarkdownTag::FencedCodeBlock);
+  const MarkdownTagDefinition* tableRule =
+      FindMarkdownTagDefinition(definition, MarkdownTag::Table);
+  const MarkdownTagDefinition* unorderedListRule =
+      FindMarkdownTagDefinition(definition, MarkdownTag::UnorderedList);
+  const MarkdownTagDefinition* orderedListRule =
+      FindMarkdownTagDefinition(definition, MarkdownTag::OrderedList);
+  const MarkdownTagDefinition* taskListRule =
+      FindMarkdownTagDefinition(definition, MarkdownTag::TaskListItem);
 
   auto closeParagraph = [&]() {
     if (!paragraph.empty()) {
       html += "<p>" +
-              ToStdString(RenderInline(ToWxString(paragraph), baseDirectory)) +
+              ToStdString(RenderInline(ToWxString(paragraph), baseDirectory,
+                                       definition)) +
               "</p>\n";
       paragraph.clear();
     }
@@ -265,11 +287,11 @@ wxString MarkdownRenderer::RenderDocument(
 
   auto closeLists = [&]() {
     if (inUnorderedList) {
-      html += "</ul>\n";
+      html += unorderedListRule ? unorderedListRule->closingHtml : "</ul>\n";
       inUnorderedList = false;
     }
     if (inOrderedList) {
-      html += "</ol>\n";
+      html += orderedListRule ? orderedListRule->closingHtml : "</ol>\n";
       inOrderedList = false;
     }
   };
@@ -277,11 +299,14 @@ wxString MarkdownRenderer::RenderDocument(
   for (size_t i = 0; i < lines.size(); ++i) {
     const std::string line = lines[i];
     const std::string trimmed = Trim(line);
+    std::smatch match;
 
-    if (StartsWith(trimmed, "```")) {
+    if (fencedCodeBlockRule &&
+        MatchTag(definition, MarkdownTag::FencedCodeBlock, trimmed)) {
       closeParagraph();
       closeLists();
-      html += inCodeBlock ? "</code></pre>\n" : "<pre><code>";
+      html += inCodeBlock ? fencedCodeBlockRule->closingHtml
+                          : fencedCodeBlockRule->openingHtml;
       inCodeBlock = !inCodeBlock;
       continue;
     }
@@ -297,16 +322,18 @@ wxString MarkdownRenderer::RenderDocument(
       continue;
     }
 
-    if (i + 1 < lines.size() && trimmed.find('|') != std::string::npos &&
+    if (tableRule && i + 1 < lines.size() &&
+        trimmed.find('|') != std::string::npos &&
         IsTableSeparator(lines[i + 1])) {
       closeParagraph();
       closeLists();
 
       const std::vector<std::string> headers = SplitTableRow(trimmed);
-      html += "<table><thead><tr>";
+      html += tableRule->openingHtml;
       for (const auto& header : headers) {
         html += "<th>" +
-                ToStdString(RenderInline(ToWxString(header), baseDirectory)) +
+                ToStdString(RenderInline(ToWxString(header), baseDirectory,
+                                         definition)) +
                 "</th>";
       }
       html += "</tr></thead><tbody>\n";
@@ -317,74 +344,87 @@ wxString MarkdownRenderer::RenderDocument(
         html += "<tr>";
         for (const auto& cell : SplitTableRow(lines[i])) {
           html += "<td>" +
-                  ToStdString(RenderInline(ToWxString(cell), baseDirectory)) +
+                  ToStdString(RenderInline(ToWxString(cell), baseDirectory,
+                                           definition)) +
                   "</td>";
         }
         html += "</tr>\n";
         ++i;
       }
       --i;
-      html += "</tbody></table>\n";
+      html += tableRule->closingHtml;
       continue;
     }
 
-    const int headingLevel = HeadingLevel(trimmed);
-    if (headingLevel > 0) {
+    if (MatchTag(definition, MarkdownTag::Heading, trimmed, &match)) {
       closeParagraph();
       closeLists();
-      const std::string content =
-          Trim(trimmed.substr(static_cast<size_t>(headingLevel)));
-      html += "<h" + std::to_string(headingLevel) + ">" +
-              ToStdString(RenderInline(ToWxString(content), baseDirectory)) +
-              "</h" + std::to_string(headingLevel) + ">\n";
+      const MarkdownTagDefinition* headingRule =
+          FindMarkdownTagDefinition(definition, MarkdownTag::Heading);
+      const std::string level = std::to_string(match[1].str().size());
+      const std::string content = ToStdString(RenderInline(
+          ToWxString(Trim(match[2].str())), baseDirectory, definition));
+      html += ApplyTemplate(headingRule->htmlTemplate,
+                            {{"$level", level}, {"$content", content}});
       continue;
     }
 
-    if (trimmed == "---" || trimmed == "***" || trimmed == "___") {
+    if (MatchTag(definition, MarkdownTag::HorizontalRule, trimmed)) {
       closeParagraph();
       closeLists();
-      html += "<hr>\n";
+      html += FindMarkdownTagDefinition(definition, MarkdownTag::HorizontalRule)
+                  ->htmlTemplate;
       continue;
     }
 
-    if (StartsWith(trimmed, "> ")) {
+    if (MatchTag(definition, MarkdownTag::Blockquote, trimmed, &match)) {
       closeParagraph();
       closeLists();
-      html += "<blockquote><p>" +
-              ToStdString(
-                  RenderInline(ToWxString(trimmed.substr(2)), baseDirectory)) +
-              "</p></blockquote>\n";
+      const MarkdownTagDefinition* blockquoteRule =
+          FindMarkdownTagDefinition(definition, MarkdownTag::Blockquote);
+      const std::string content = ToStdString(
+          RenderInline(ToWxString(match[1].str()), baseDirectory, definition));
+      html +=
+          ApplyTemplate(blockquoteRule->htmlTemplate, {{"$content", content}});
       continue;
     }
 
-    if (IsUnorderedListItem(line) || IsOrderedListItem(line)) {
+    const bool unordered =
+        unorderedListRule &&
+        MatchTag(definition, MarkdownTag::UnorderedList, line, &match);
+    const std::smatch unorderedMatch = match;
+    const bool ordered =
+        orderedListRule &&
+        MatchTag(definition, MarkdownTag::OrderedList, line, &match);
+    if (unordered || ordered) {
       closeParagraph();
-      const bool ordered = IsOrderedListItem(line);
       if (ordered && !inOrderedList) {
         closeLists();
-        html += "<ol>\n";
+        html += orderedListRule->openingHtml;
         inOrderedList = true;
       } else if (!ordered && !inUnorderedList) {
         closeLists();
-        html += "<ul>\n";
+        html += unorderedListRule->openingHtml;
         inUnorderedList = true;
       }
 
-      std::string itemText = StripListMarker(line);
-      bool checked = false;
-      if (IsTaskItem(itemText, &checked)) {
-        itemText = itemText.substr(4);
-        html += "<li class=\"task\"><input type=\"checkbox\" disabled";
-        if (checked) {
-          html += " checked";
-        }
-        html += "> " +
-                ToStdString(RenderInline(ToWxString(itemText), baseDirectory)) +
-                "</li>\n";
+      const std::string itemText =
+          ordered ? match[1].str() : unorderedMatch[1].str();
+      std::smatch taskMatch;
+      if (taskListRule && std::regex_match(itemText, taskMatch,
+                                           std::regex(taskListRule->pattern))) {
+        const std::string checked =
+            Trim(taskMatch[1].str()).empty() ? "" : " checked";
+        const std::string content = ToStdString(RenderInline(
+            ToWxString(taskMatch[2].str()), baseDirectory, definition));
+        html += ApplyTemplate(taskListRule->htmlTemplate,
+                              {{"$checked", checked}, {"$content", content}});
       } else {
-        html += "<li>" +
-                ToStdString(RenderInline(ToWxString(itemText), baseDirectory)) +
-                "</li>\n";
+        const MarkdownTagDefinition* listRule =
+            ordered ? orderedListRule : unorderedListRule;
+        const std::string content = ToStdString(
+            RenderInline(ToWxString(itemText), baseDirectory, definition));
+        html += ApplyTemplate(listRule->htmlTemplate, {{"$content", content}});
       }
       continue;
     }
@@ -398,31 +438,40 @@ wxString MarkdownRenderer::RenderDocument(
 
   closeParagraph();
   closeLists();
-  if (inCodeBlock) {
-    html += "</code></pre>\n";
+  if (inCodeBlock && fencedCodeBlockRule) {
+    html += fencedCodeBlockRule->closingHtml;
   }
 
   return ToWxString(html);
 }
 
-wxString MarkdownRenderer::RenderInline(const wxString& text,
-                                        const wxString& baseDirectory) const {
+wxString MarkdownRenderer::RenderInline(
+    const wxString& text, const wxString& baseDirectory,
+    const MarkdownFlavorDefinition& definition) const {
   std::string html = EscapeHtml(ToStdString(text));
   std::vector<std::string> codeSpans;
-  html = ProtectCodeSpans(html, &codeSpans);
+  if (const MarkdownTagDefinition* inlineCodeRule =
+          FindMarkdownTagDefinition(definition, MarkdownTag::InlineCode)) {
+    html = ProtectInlineTag(html, *inlineCodeRule, &codeSpans);
+  }
 
-  html = std::regex_replace(html, std::regex("!\\[([^\\]]*)\\]\\(([^\\)]+)\\)"),
-                            "<img alt=\"$1\" src=\"$2\">");
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Image));
   html = ResolveImagePaths(html, baseDirectory);
-  html = std::regex_replace(html, std::regex("\\[([^\\]]+)\\]\\(([^\\)]+)\\)"),
-                            "<a href=\"$2\">$1</a>");
-  html = std::regex_replace(html, std::regex("\\*\\*\\*([^*]+)\\*\\*\\*"),
-                            "<strong><em>$1</em></strong>");
-  html = std::regex_replace(html, std::regex("\\*\\*([^*]+)\\*\\*"),
-                            "<strong>$1</strong>");
-  html = std::regex_replace(html, std::regex("\\*([^*]+)\\*"), "<em>$1</em>");
-  html = std::regex_replace(html, std::regex("~~([^~]+)~~"),
-                            "<span class=\"glance-strike\">$1</span>");
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Link));
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::BoldItalic));
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Bold));
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Italic));
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Strikethrough));
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Subscript));
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Superscript));
   html = RestoreCodeSpans(std::move(html), codeSpans);
 
   return ToWxString(html);

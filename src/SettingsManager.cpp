@@ -89,6 +89,62 @@ void SettingsManager::ClearRecentItems() const {
   config.Flush();
 }
 
+MarkdownFlavor SettingsManager::LoadDocumentMarkdownFlavor(
+    const wxString& filePath) const {
+  const wxString normalizedPath = DocumentManager::NormalizePath(filePath);
+  if (normalizedPath.empty()) {
+    return MarkdownFlavor::GitHub;
+  }
+
+  wxConfig config("Glance");
+  config.SetPath("/DocumentMarkdownFlavors");
+
+  long count = 0;
+  config.Read("Count", &count, 0);
+  for (long i = 0; i < count; ++i) {
+    wxString path;
+    wxString flavorId;
+    if (config.Read(wxString::Format("Path%ld", i), &path) &&
+        path == normalizedPath &&
+        config.Read(wxString::Format("Flavor%ld", i), &flavorId)) {
+      return MarkdownFlavorFromId(flavorId);
+    }
+  }
+
+  return MarkdownFlavor::GitHub;
+}
+
+void SettingsManager::SaveDocumentMarkdownFlavor(const wxString& filePath,
+                                                 MarkdownFlavor flavor) const {
+  const wxString normalizedPath = DocumentManager::NormalizePath(filePath);
+  if (normalizedPath.empty()) {
+    return;
+  }
+
+  wxConfig config("Glance");
+  config.SetPath("/DocumentMarkdownFlavors");
+
+  long count = 0;
+  config.Read("Count", &count, 0);
+  long writeIndex = count;
+  for (long i = 0; i < count; ++i) {
+    wxString path;
+    if (config.Read(wxString::Format("Path%ld", i), &path) &&
+        path == normalizedPath) {
+      writeIndex = i;
+      break;
+    }
+  }
+
+  config.Write(wxString::Format("Path%ld", writeIndex), normalizedPath);
+  config.Write(wxString::Format("Flavor%ld", writeIndex),
+               MarkdownFlavorToId(flavor));
+  if (writeIndex == count) {
+    config.Write("Count", count + 1);
+  }
+  config.Flush();
+}
+
 wxArrayString SettingsManager::LoadRecentItems(
     const wxString& groupName) const {
   wxConfig config("Glance");

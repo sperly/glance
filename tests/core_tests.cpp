@@ -3,10 +3,12 @@
 #include <wx/init.h>
 
 #include <iostream>
+#include <vector>
 
 #include "Document.h"
 #include "DocumentManager.h"
 #include "MarkdownRenderer.h"
+#include "MarkdownValidator.h"
 
 namespace {
 int g_failureCount = 0;
@@ -253,6 +255,95 @@ void TestMarkdownRendererKeepsAbsoluteRemoteAndAnchorImagePaths() {
 
   wxRemoveFile(sourceFilePath);
 }
+
+void TestMarkdownRendererUsesVanillaFlavor() {
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument(
+      "~~gone~~\n\n- [x] done\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n",
+      wxString(), MarkdownFlavor::Vanilla);
+
+  ExpectNotContains(html, "class=\"glance-strike\"",
+                    "vanilla flavor does not render strikethrough extension");
+  ExpectNotContains(html, "type=\"checkbox\"",
+                    "vanilla flavor does not render task list extension");
+  ExpectNotContains(html, "<table>",
+                    "vanilla flavor does not render table extension");
+}
+
+void TestMarkdownValidatorFlagsUnsupportedVanillaExtensions() {
+  MarkdownValidator validator;
+  const std::vector<MarkdownDiagnostic> diagnostics = validator.Validate(
+      "~~gone~~\n\n- [x] done\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n",
+      MarkdownFlavor::Vanilla);
+
+  Expect(diagnostics.size() == 3,
+         "vanilla validator flags each unsupported GitHub extension");
+}
+
+void TestMarkdownValidatorAllowsGithubExtensions() {
+  MarkdownValidator validator;
+  const std::vector<MarkdownDiagnostic> diagnostics = validator.Validate(
+      "~~gone~~\n\n- [x] done\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n",
+      MarkdownFlavor::GitHub);
+
+  Expect(diagnostics.empty(),
+         "github validator allows supported GitHub extensions");
+}
+
+void TestMarkdownRendererRendersSubscriptAndSuperscript() {
+  MarkdownRenderer renderer;
+  const wxString html =
+      renderer.RenderDocument("H~2~O and E = mc^2^ and ~~gone~~");
+
+  ExpectContains(html, "H<sub>2</sub>O", "subscript renders as sub tag");
+  ExpectContains(html, "mc<sup>2</sup>", "superscript renders as sup tag");
+  ExpectContains(html, "class=\"glance-strike\"",
+                 "strikethrough still renders separately from subscript");
+}
+
+void TestMarkdownRendererHandlesGithubLanguageFences() {
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument("```sh\nprintf '<ok>'\n```\n");
+
+  ExpectContains(html, "<pre><code>printf '&lt;ok&gt;'\n</code></pre>",
+                 "github language-labelled fenced code block renders");
+  ExpectNotContains(html, "<p>```sh", "opening code fence is not rendered");
+  ExpectNotContains(html, "<p>```</p>", "closing code fence is not rendered");
+}
+
+void TestMarkdownValidatorAllowsGithubLanguageFences() {
+  MarkdownValidator validator;
+  const std::vector<MarkdownDiagnostic> diagnostics = validator.Validate(
+      "```cpp\nint main() {}\n```\n", MarkdownFlavor::GitHub);
+
+  Expect(diagnostics.empty(),
+         "github validator allows language-labelled fenced code blocks");
+}
+
+void TestMarkdownRendererUsesFlavorDefinedInlineTags() {
+  MarkdownFlavorDefinition customFlavor{
+      MarkdownFlavor::GitHub,
+      "custom",
+      "Custom Markdown",
+      "Test-only custom Markdown flavor.",
+      {{MarkdownTag::InlineCode, MarkdownTagKind::Inline, "Inline code",
+        "@([^@]+)@", "<kbd>$1</kbd>", "", ""},
+       {MarkdownTag::Bold, MarkdownTagKind::Inline, "Highlight",
+        "==([^=]+)==", "<mark>$1</mark>", "", ""}}};
+
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument(
+      "@shortcut@ and ==marked== and `plain`", wxString(), customFlavor);
+
+  ExpectContains(html, "<kbd>shortcut</kbd>",
+                 "custom inline code syntax renders with its template");
+  ExpectContains(html, "<mark>marked</mark>",
+                 "custom bold syntax renders with its template");
+  ExpectContains(html, "`plain`",
+                 "undefined regular inline code syntax is left as text");
+  ExpectNotContains(html, "<code>plain</code>",
+                    "custom flavor does not use missing inline code syntax");
+}
 }  // namespace
 
 int main() {
@@ -273,6 +364,13 @@ int main() {
   TestMarkdownRendererClosesListWhenListTypeChanges();
   TestMarkdownRendererResolvesNestedRelativeImagePaths();
   TestMarkdownRendererKeepsAbsoluteRemoteAndAnchorImagePaths();
+  TestMarkdownRendererUsesVanillaFlavor();
+  TestMarkdownValidatorFlagsUnsupportedVanillaExtensions();
+  TestMarkdownValidatorAllowsGithubExtensions();
+  TestMarkdownRendererRendersSubscriptAndSuperscript();
+  TestMarkdownRendererHandlesGithubLanguageFences();
+  TestMarkdownValidatorAllowsGithubLanguageFences();
+  TestMarkdownRendererUsesFlavorDefinedInlineTags();
 
   if (g_failureCount > 0) {
     std::cerr << g_failureCount << " test failure(s)\n";

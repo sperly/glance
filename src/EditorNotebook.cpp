@@ -287,10 +287,16 @@ void EditorNotebook::OnPageClose(wxAuiNotebookEvent& event) {
     return;
   }
 
-  m_documentManager.CloseDocument(editor->GetDocument());
+  Document* document = editor->GetDocument();
+  event.Veto();
+
+  m_closingProgrammatically = true;
+  DeletePage(static_cast<size_t>(selection));
+  m_closingProgrammatically = false;
+
+  m_documentManager.CloseDocument(document);
   SendActiveDocumentChanged();
   SendStatusChanged();
-  event.Skip();
 }
 
 GlanceCtrl* EditorNotebook::GetEditorAt(size_t pageIndex) const {

@@ -5,6 +5,8 @@
 #include <wx/gdicmn.h>
 #include <wx/string.h>
 
+#include "MarkdownFlavor.h"
+
 struct WindowSettings {
   bool hasGeometry = false;
   bool maximized = false;
@@ -24,6 +26,9 @@ class SettingsManager {
   void AddRecentFile(const wxString& filePath) const;
   void AddRecentFolder(const wxString& folderPath) const;
   void ClearRecentItems() const;
+  MarkdownFlavor LoadDocumentMarkdownFlavor(const wxString& filePath) const;
+  void SaveDocumentMarkdownFlavor(const wxString& filePath,
+                                  MarkdownFlavor flavor) const;
 
  private:
   wxArrayString LoadRecentItems(const wxString& groupName) const;

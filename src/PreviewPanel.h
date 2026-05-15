@@ -17,11 +17,13 @@ class PreviewPanel : public wxPanel {
   explicit PreviewPanel(wxWindow* parent);
   ~PreviewPanel() override;
 
-  void ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath);
+  void ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath,
+                    MarkdownFlavor flavor = MarkdownFlavor::GitHub);
   void Clear();
   wxString GetHtmlSource() const;
   bool PrintMarkdown(const wxString& markdown, const wxString& sourceFilePath,
-                     const wxString& title);
+                     const wxString& title,
+                     MarkdownFlavor flavor = MarkdownFlavor::GitHub);
 
  private:
   void OnUpdateTimer(wxTimerEvent& event);
@@ -39,6 +41,7 @@ class PreviewPanel : public wxPanel {
   MarkdownRenderer m_renderer;
   wxString m_pendingMarkdown;
   wxString m_sourceFilePath;
+  MarkdownFlavor m_flavor;
 };
 
 #endif  // PREVIEW_PANEL_H
