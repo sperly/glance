@@ -5,14 +5,13 @@
 
 class MainFrame;
 
-class GlanceApp : public wxApp
-{
-public:
-    virtual bool OnInit() override;
-    virtual int OnExit() override;
+class GlanceApp : public wxApp {
+ public:
+  virtual bool OnInit() override;
+  virtual int OnExit() override;
 
-private:
-    MainFrame* m_mainFrame;
+ private:
+  MainFrame* m_mainFrame;
 };
 
-#endif // GLANCE_APP_H
+#endif  // GLANCE_APP_H

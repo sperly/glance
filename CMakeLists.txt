@@ -10,16 +10,8 @@ include(GlanceResources)
 include(GlanceTests)
 include(GlanceWebView)
 
-# Find wxWidgets
-find_package(wxWidgets REQUIRED COMPONENTS core base adv aui html stc)
-include(${wxWidgets_USE_FILE})
-
-glance_configure_embedded_resources(GLANCE_EMBEDDED_RESOURCES_SOURCE)
-
-# Add executable
-add_executable(glance
+set(GLANCE_APP_SOURCES
     src/main.cpp
-    ${GLANCE_EMBEDDED_RESOURCES_SOURCE}
     src/EmbeddedResources.h
     src/GlanceApp.cpp
     src/GlanceApp.h
@@ -49,6 +41,23 @@ add_executable(glance
     src/SettingsManager.h
 )
 
+set(GLANCE_FORMAT_SOURCES
+    ${GLANCE_APP_SOURCES}
+    tests/core_tests.cpp
+)
+
+# Find wxWidgets
+find_package(wxWidgets REQUIRED COMPONENTS core base adv aui html stc)
+include(${wxWidgets_USE_FILE})
+
+glance_configure_embedded_resources(GLANCE_EMBEDDED_RESOURCES_SOURCE)
+
+# Add executable
+add_executable(glance
+    ${GLANCE_APP_SOURCES}
+    ${GLANCE_EMBEDDED_RESOURCES_SOURCE}
+)
+
 # Link wxWidgets libraries
 target_link_libraries(glance ${wxWidgets_LIBRARIES})
 glance_configure_webview(glance)
@@ -64,5 +73,20 @@ target_compile_definitions(glance
 
 # Include directories
 target_include_directories(glance PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
+
+find_program(CLANG_FORMAT_EXE NAMES clang-format)
+if(CLANG_FORMAT_EXE)
+    add_custom_target(format
+        COMMAND ${CLANG_FORMAT_EXE} -i ${GLANCE_FORMAT_SOURCES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Formatting C++ sources with clang-format"
+        VERBATIM
+    )
+else()
+    add_custom_target(format
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format not found. Install clang-format to use the format target."
+        VERBATIM
+    )
+endif()
 
 glance_add_core_tests()

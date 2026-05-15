@@ -4,31 +4,30 @@
 #include <wx/datetime.h>
 #include <wx/string.h>
 
-class Document
-{
-public:
-    explicit Document(wxString filePath = wxString());
+class Document {
+ public:
+  explicit Document(wxString filePath = wxString());
 
-    const wxString& GetFilePath() const;
-    wxString GetFileName() const;
-    const wxString& GetContent() const;
-    bool IsModified() const;
+  const wxString& GetFilePath() const;
+  wxString GetFileName() const;
+  const wxString& GetContent() const;
+  bool IsModified() const;
 
-    void SetContent(const wxString& content);
-    void SetModified(bool modified);
+  void SetContent(const wxString& content);
+  void SetModified(bool modified);
 
-    bool Load(wxString* errorMessage = nullptr);
-    bool Save(wxString* errorMessage = nullptr);
-    bool HasChangedOnDisk() const;
-    void MarkDiskStateCurrent();
+  bool Load(wxString* errorMessage = nullptr);
+  bool Save(wxString* errorMessage = nullptr);
+  bool HasChangedOnDisk() const;
+  void MarkDiskStateCurrent();
 
-private:
-    wxDateTime GetDiskModificationTime() const;
+ private:
+  wxDateTime GetDiskModificationTime() const;
 
-    wxString m_filePath;
-    wxString m_content;
-    wxDateTime m_lastKnownModificationTime;
-    bool m_modified;
+  wxString m_filePath;
+  wxString m_content;
+  wxDateTime m_lastKnownModificationTime;
+  bool m_modified;
 };
 
-#endif // DOCUMENT_H
+#endif  // DOCUMENT_H

@@ -3,10 +3,9 @@
 
 #include <wx/dialog.h>
 
-class HelpDialog : public wxDialog
-{
-public:
-    explicit HelpDialog(wxWindow* parent);
+class HelpDialog : public wxDialog {
+ public:
+  explicit HelpDialog(wxWindow* parent);
 };
 
-#endif // HELP_DIALOG_H
+#endif  // HELP_DIALOG_H

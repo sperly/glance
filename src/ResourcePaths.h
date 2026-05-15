@@ -5,4 +5,4 @@
 
 wxString GetResourcePath(const wxString& fileName);
 
-#endif // RESOURCE_PATHS_H
+#endif  // RESOURCE_PATHS_H

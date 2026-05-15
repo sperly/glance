@@ -1,15 +1,15 @@
 #include "HelpDialog.h"
-#include "EmbeddedResources.h"
-#include "MarkdownRenderer.h"
+
 #include <wx/button.h>
 #include <wx/html/htmlwin.h>
 #include <wx/sizer.h>
 
-namespace
-{
-wxString BuildHelpHtml(const wxString& body)
-{
-    return R"(<!doctype html>
+#include "EmbeddedResources.h"
+#include "MarkdownRenderer.h"
+
+namespace {
+wxString BuildHelpHtml(const wxString& body) {
+  return R"(<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -43,36 +43,33 @@ a { color: #075985; }
 </style>
 </head>
 <body>
-)" + body + R"(
+)" + body +
+         R"(
 </body>
 </html>)";
 }
-}
+}  // namespace
 
 HelpDialog::HelpDialog(wxWindow* parent)
-    : wxDialog(parent,
-               wxID_ANY,
-               "Glance Help",
-               wxDefaultPosition,
-               wxSize(760, 640),
-               wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
-{
-    MarkdownRenderer renderer;
-    wxHtmlWindow* helpView = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_AUTO);
-    helpView->SetPage(BuildHelpHtml(renderer.RenderDocument(wxString::FromUTF8(GetEmbeddedHelpMarkdown()))));
+    : wxDialog(parent, wxID_ANY, "Glance Help", wxDefaultPosition,
+               wxSize(760, 640), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER) {
+  MarkdownRenderer renderer;
+  wxHtmlWindow* helpView = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition,
+                                            wxDefaultSize, wxHW_SCROLLBAR_AUTO);
+  helpView->SetPage(BuildHelpHtml(
+      renderer.RenderDocument(wxString::FromUTF8(GetEmbeddedHelpMarkdown()))));
 
-    wxButton* closeButton = new wxButton(this, wxID_CLOSE, "Close");
-    closeButton->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
-        EndModal(wxID_CLOSE);
-    });
+  wxButton* closeButton = new wxButton(this, wxID_CLOSE, "Close");
+  closeButton->Bind(wxEVT_BUTTON,
+                    [this](wxCommandEvent&) { EndModal(wxID_CLOSE); });
 
-    wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
-    buttonSizer->AddStretchSpacer();
-    buttonSizer->Add(closeButton, 0);
+  wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+  buttonSizer->AddStretchSpacer();
+  buttonSizer->Add(closeButton, 0);
 
-    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(helpView, 1, wxEXPAND | wxALL, 8);
-    sizer->Add(buttonSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
-    SetSizerAndFit(sizer);
-    SetMinSize(wxSize(620, 420));
+  wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+  sizer->Add(helpView, 1, wxEXPAND | wxALL, 8);
+  sizer->Add(buttonSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+  SetSizerAndFit(sizer);
+  SetMinSize(wxSize(620, 420));
 }

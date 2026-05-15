@@ -3,13 +3,14 @@
 
 #include <wx/string.h>
 
-class MarkdownRenderer
-{
-public:
-    wxString RenderDocument(const wxString& markdown, const wxString& sourceFilePath = wxString()) const;
+class MarkdownRenderer {
+ public:
+  wxString RenderDocument(const wxString& markdown,
+                          const wxString& sourceFilePath = wxString()) const;
 
-private:
-    wxString RenderInline(const wxString& text, const wxString& baseDirectory = wxString()) const;
+ private:
+  wxString RenderInline(const wxString& text,
+                        const wxString& baseDirectory = wxString()) const;
 };
 
-#endif // MARKDOWN_RENDERER_H
+#endif  // MARKDOWN_RENDERER_H

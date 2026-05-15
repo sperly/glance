@@ -12,33 +12,33 @@
 
 class wxHtmlEasyPrinting;
 
-class PreviewPanel : public wxPanel
-{
-public:
-    explicit PreviewPanel(wxWindow* parent);
-    ~PreviewPanel() override;
+class PreviewPanel : public wxPanel {
+ public:
+  explicit PreviewPanel(wxWindow* parent);
+  ~PreviewPanel() override;
 
-    void ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath);
-    void Clear();
-    wxString GetHtmlSource() const;
-    bool PrintMarkdown(const wxString& markdown, const wxString& sourceFilePath, const wxString& title);
+  void ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath);
+  void Clear();
+  wxString GetHtmlSource() const;
+  bool PrintMarkdown(const wxString& markdown, const wxString& sourceFilePath,
+                     const wxString& title);
 
-private:
-    void OnUpdateTimer(wxTimerEvent& event);
-    wxString BuildHtmlPage(const wxString& renderedBody) const;
-    wxString GetBasePath() const;
-    wxString GetBaseUrl() const;
+ private:
+  void OnUpdateTimer(wxTimerEvent& event);
+  wxString BuildHtmlPage(const wxString& renderedBody) const;
+  wxString GetBasePath() const;
+  wxString GetBaseUrl() const;
 
 #ifdef GLANCE_USE_WEBVIEW
-    wxWebView* m_webView;
+  wxWebView* m_webView;
 #else
-    wxHtmlWindow* m_htmlWindow;
+  wxHtmlWindow* m_htmlWindow;
 #endif
-    wxHtmlEasyPrinting* m_htmlPrinter;
-    wxTimer m_updateTimer;
-    MarkdownRenderer m_renderer;
-    wxString m_pendingMarkdown;
-    wxString m_sourceFilePath;
+  wxHtmlEasyPrinting* m_htmlPrinter;
+  wxTimer m_updateTimer;
+  MarkdownRenderer m_renderer;
+  wxString m_pendingMarkdown;
+  wxString m_sourceFilePath;
 };
 
-#endif // PREVIEW_PANEL_H
+#endif  // PREVIEW_PANEL_H

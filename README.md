@@ -52,6 +52,12 @@ Run the lightweight core test suite with CTest:
 ctest --test-dir build --output-on-failure
 ```
 
+Format the C++ sources with clang-format using the project Google-style configuration:
+
+```sh
+cmake --build build --target format
+```
+
 ## Features
 
 Glance is a portable Markdown editor with a folder tree, tabbed editor, and rendered preview.

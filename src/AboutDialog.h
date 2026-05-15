@@ -3,10 +3,9 @@
 
 #include <wx/dialog.h>
 
-class AboutDialog : public wxDialog
-{
-public:
-    explicit AboutDialog(wxWindow* parent);
+class AboutDialog : public wxDialog {
+ public:
+  explicit AboutDialog(wxWindow* parent);
 };
 
-#endif // ABOUT_DIALOG_H
+#endif  // ABOUT_DIALOG_H

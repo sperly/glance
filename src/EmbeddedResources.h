@@ -9,4 +9,4 @@ std::size_t GetEmbeddedGlanceIconPngSize();
 const unsigned char* GetEmbeddedGlanceLogoPngData();
 std::size_t GetEmbeddedGlanceLogoPngSize();
 
-#endif // EMBEDDED_RESOURCES_H
+#endif  // EMBEDDED_RESOURCES_H
