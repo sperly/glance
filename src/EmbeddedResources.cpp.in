@@ -9,6 +9,14 @@ const unsigned char kEmbeddedGlanceIconPng[] = {
 const unsigned char kEmbeddedGlanceLogoPng[] = {
     @GLANCE_LOGO_PNG_BYTES@
 };
+
+const unsigned char kEmbeddedHighlightJs[] = {
+    @GLANCE_HIGHLIGHT_JS_BYTES@
+};
+
+const unsigned char kEmbeddedHighlightCss[] = {
+    @GLANCE_HIGHLIGHT_CSS_BYTES@
+};
 }
 
 const char* GetEmbeddedHelpMarkdown()
@@ -16,14 +24,24 @@ const char* GetEmbeddedHelpMarkdown()
     return R"glance_help(@GLANCE_HELP_MARKDOWN@)glance_help";
 }
 
-const char* GetEmbeddedHighlightJs()
+const unsigned char* GetEmbeddedHighlightJsData()
 {
-    return R"hljs(@GLANCE_HIGHLIGHT_JS@)hljs";
+    return kEmbeddedHighlightJs;
 }
 
-const char* GetEmbeddedHighlightCss()
+std::size_t GetEmbeddedHighlightJsSize()
 {
-    return R"hlcss(@GLANCE_HIGHLIGHT_CSS@)hlcss";
+    return @GLANCE_HIGHLIGHT_JS_SIZE@;
+}
+
+const unsigned char* GetEmbeddedHighlightCssData()
+{
+    return kEmbeddedHighlightCss;
+}
+
+std::size_t GetEmbeddedHighlightCssSize()
+{
+    return @GLANCE_HIGHLIGHT_CSS_SIZE@;
 }
 
 const unsigned char* GetEmbeddedGlanceIconPngData()

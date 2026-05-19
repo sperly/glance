@@ -8,7 +8,11 @@
 
 namespace {
 constexpr int PreviewDebounceMs = 400;
+
+wxString EmbeddedUtf8String(const unsigned char* data, std::size_t size) {
+  return wxString::FromUTF8(reinterpret_cast<const char*>(data), size);
 }
+}  // namespace
 
 PreviewPanel::PreviewPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY),
@@ -156,7 +160,9 @@ hr { border: 0; border-top: 1px solid #d8dee6; margin: 1.5em 0; }
 mark { background: #fff3a3; color: inherit; padding: 0.05em 0.2em; border-radius: 3px; }
 .task { list-style: none; margin-left: -1.2em; }
 .empty { color: #6b7280; }
-)" + wxString::FromUTF8(GetEmbeddedHighlightCss()) +
+)" +
+                  EmbeddedUtf8String(GetEmbeddedHighlightCssData(),
+                                     GetEmbeddedHighlightCssSize()) +
                   R"(
 </style>
 </head>
@@ -167,7 +173,9 @@ mark { background: #fff3a3; color: inherit; padding: 0.05em 0.2em; border-radius
 #ifdef GLANCE_USE_WEBVIEW
   page += R"(
 <script>
-)" + wxString::FromUTF8(GetEmbeddedHighlightJs()) +
+)" +
+          EmbeddedUtf8String(GetEmbeddedHighlightJsData(),
+                             GetEmbeddedHighlightJsSize()) +
           R"(
 </script>
 <script>
