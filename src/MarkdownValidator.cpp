@@ -204,6 +204,13 @@ std::vector<MarkdownDiagnostic> MarkdownValidator::Validate(
                     unsupportedMessage(MarkdownTag::Strikethrough));
     }
 
+    if (missingTag(MarkdownTag::Highlight) &&
+        ContainsTag(referenceDefinition, MarkdownTag::Highlight, line)) {
+      AddDiagnostic(&diagnostics, lineNumber,
+                    MarkdownDiagnosticSeverity::Warning,
+                    unsupportedMessage(MarkdownTag::Highlight));
+    }
+
     if (missingTag(MarkdownTag::Subscript) &&
         ContainsTag(referenceDefinition, MarkdownTag::Subscript, line)) {
       AddDiagnostic(&diagnostics, lineNumber,

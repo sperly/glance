@@ -39,14 +39,16 @@ std::vector<MarkdownTagDefinition> GitHubMarkdownTags() {
                   "$checked> $content</li>\n",
                   "", ""});
   tags.push_back({MarkdownTag::FencedCodeBlock, MarkdownTagKind::Block,
-                  "Fenced code block", "^\\s*```.*$", "<pre><code>$content",
-                  "<pre><code>", "</code></pre>\n"});
+                  "Fenced code block", "^\\s*```\\s*([A-Za-z0-9_+.-]*)[^`]*$",
+                  "<pre><code>$content", "<pre><code>", "</code></pre>\n"});
   tags.push_back({MarkdownTag::Table, MarkdownTagKind::Block, "Table",
                   "^\\s*\\|?.*\\|.*\\n\\s*\\|?\\s*:?-{3,}:?\\s*\\|", "",
                   "<table><thead><tr>", "</tbody></table>\n"});
   tags.push_back({MarkdownTag::Strikethrough, MarkdownTagKind::Inline,
                   "Strikethrough", "~~([^~]+)~~",
                   "<span class=\"glance-strike\">$1</span>", "", ""});
+  tags.push_back({MarkdownTag::Highlight, MarkdownTagKind::Inline, "Highlight",
+                  "==([^=]+)==", "<mark>$1</mark>", "", ""});
   tags.push_back({MarkdownTag::Subscript, MarkdownTagKind::Inline, "Subscript",
                   "(^|[^~])~([^\\s~]+)~([^~]|$)", "$1<sub>$2</sub>$3", "", ""});
   tags.push_back({MarkdownTag::Superscript, MarkdownTagKind::Inline,

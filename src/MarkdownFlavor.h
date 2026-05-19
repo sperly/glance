@@ -32,6 +32,7 @@ enum class MarkdownTag {
   Bold,
   Italic,
   InlineCode,
+  Highlight,
   Strikethrough,
   Subscript,
   Superscript,

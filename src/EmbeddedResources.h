@@ -4,6 +4,8 @@
 #include <cstddef>
 
 const char* GetEmbeddedHelpMarkdown();
+const char* GetEmbeddedHighlightJs();
+const char* GetEmbeddedHighlightCss();
 const unsigned char* GetEmbeddedGlanceIconPngData();
 std::size_t GetEmbeddedGlanceIconPngSize();
 const unsigned char* GetEmbeddedGlanceLogoPngData();

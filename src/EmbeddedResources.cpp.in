@@ -16,6 +16,16 @@ const char* GetEmbeddedHelpMarkdown()
     return R"glance_help(@GLANCE_HELP_MARKDOWN@)glance_help";
 }
 
+const char* GetEmbeddedHighlightJs()
+{
+    return R"hljs(@GLANCE_HIGHLIGHT_JS@)hljs";
+}
+
+const char* GetEmbeddedHighlightCss()
+{
+    return R"hlcss(@GLANCE_HIGHLIGHT_CSS@)hlcss";
+}
+
 const unsigned char* GetEmbeddedGlanceIconPngData()
 {
     return kEmbeddedGlanceIconPng;

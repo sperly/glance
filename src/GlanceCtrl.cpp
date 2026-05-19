@@ -58,6 +58,9 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
     case MarkdownCommand::Strikethrough:
       WrapSelection("~~", "~~", "struck text");
       break;
+    case MarkdownCommand::Highlight:
+      WrapSelection("==", "==", "highlighted text");
+      break;
     case MarkdownCommand::Subscript:
       WrapSelection("~", "~", "lower text");
       break;
@@ -290,6 +293,7 @@ void GlanceCtrl::ClearFormatting() {
   wxString text = GetSelectedText();
   text.Replace("***", "");
   text.Replace("**", "");
+  text.Replace("==", "");
   text.Replace("*", "");
   text.Replace("~~", "");
   text.Replace("`", "");

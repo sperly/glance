@@ -11,6 +11,7 @@ enum class MarkdownCommand {
   BoldItalic,
   Underline,
   Strikethrough,
+  Highlight,
   Subscript,
   Superscript,
   InlineCode,

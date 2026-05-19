@@ -10,6 +10,13 @@
 #include <vector>
 
 namespace {
+enum class TableAlignment {
+  None,
+  Left,
+  Center,
+  Right,
+};
+
 std::string ToStdString(const wxString& value) {
   return std::string(value.utf8_string());
 }
@@ -97,6 +104,14 @@ bool MatchTag(const MarkdownFlavorDefinition& definition, MarkdownTag tag,
   return std::regex_match(value, pattern);
 }
 
+std::string BuildFencedCodeBlockOpening(const std::smatch& match) {
+  if (match.size() < 2 || match[1].str().empty()) {
+    return "<pre><code>";
+  }
+
+  return "<pre><code class=\"language-" + EscapeHtml(match[1].str()) + "\">";
+}
+
 std::vector<std::string> SplitLines(const std::string& text) {
   std::vector<std::string> lines;
   std::stringstream stream(text);
@@ -142,16 +157,71 @@ bool IsTableSeparator(const std::string& line) {
   }
 
   return std::all_of(cells.begin(), cells.end(), [](const std::string& cell) {
-    const std::string trimmed = Trim(cell);
+    std::string trimmed = Trim(cell);
+    trimmed.erase(
+        std::remove_if(trimmed.begin(), trimmed.end(),
+                       [](unsigned char ch) { return std::isspace(ch); }),
+        trimmed.end());
     if (trimmed.size() < 3) {
       return false;
     }
 
-    return std::all_of(trimmed.begin(), trimmed.end(), [](char ch) {
-      return ch == '-' || ch == ':' ||
-             std::isspace(static_cast<unsigned char>(ch));
-    });
+    const bool leftColon = trimmed.front() == ':';
+    const bool rightColon = trimmed.back() == ':';
+    if (leftColon) {
+      trimmed.erase(trimmed.begin());
+    }
+    if (rightColon && !trimmed.empty()) {
+      trimmed.pop_back();
+    }
+
+    return trimmed.size() >= 3 &&
+           std::all_of(trimmed.begin(), trimmed.end(),
+                       [](char ch) { return ch == '-'; });
   });
+}
+
+std::vector<TableAlignment> ParseTableAlignments(const std::string& line) {
+  std::vector<TableAlignment> alignments;
+  const std::vector<std::string> cells = SplitTableRow(line);
+  alignments.reserve(cells.size());
+
+  for (const std::string& cell : cells) {
+    std::string trimmed = Trim(cell);
+    trimmed.erase(
+        std::remove_if(trimmed.begin(), trimmed.end(),
+                       [](unsigned char ch) { return std::isspace(ch); }),
+        trimmed.end());
+
+    const bool leftColon = !trimmed.empty() && trimmed.front() == ':';
+    const bool rightColon = !trimmed.empty() && trimmed.back() == ':';
+    if (leftColon && rightColon) {
+      alignments.push_back(TableAlignment::Center);
+    } else if (leftColon) {
+      alignments.push_back(TableAlignment::Left);
+    } else if (rightColon) {
+      alignments.push_back(TableAlignment::Right);
+    } else {
+      alignments.push_back(TableAlignment::None);
+    }
+  }
+
+  return alignments;
+}
+
+std::string TableAlignmentAttribute(TableAlignment alignment) {
+  switch (alignment) {
+    case TableAlignment::Left:
+      return " style=\"text-align: left;\"";
+    case TableAlignment::Center:
+      return " style=\"text-align: center;\"";
+    case TableAlignment::Right:
+      return " style=\"text-align: right;\"";
+    case TableAlignment::None:
+      return "";
+  }
+
+  return "";
 }
 
 bool IsAbsoluteOrRemotePath(const std::string& path) {
@@ -302,11 +372,11 @@ wxString MarkdownRenderer::RenderDocument(
     std::smatch match;
 
     if (fencedCodeBlockRule &&
-        MatchTag(definition, MarkdownTag::FencedCodeBlock, trimmed)) {
+        MatchTag(definition, MarkdownTag::FencedCodeBlock, trimmed, &match)) {
       closeParagraph();
       closeLists();
       html += inCodeBlock ? fencedCodeBlockRule->closingHtml
-                          : fencedCodeBlockRule->openingHtml;
+                          : BuildFencedCodeBlockOpening(match);
       inCodeBlock = !inCodeBlock;
       continue;
     }
@@ -329,11 +399,17 @@ wxString MarkdownRenderer::RenderDocument(
       closeLists();
 
       const std::vector<std::string> headers = SplitTableRow(trimmed);
+      const std::vector<TableAlignment> alignments =
+          ParseTableAlignments(lines[i + 1]);
       html += tableRule->openingHtml;
-      for (const auto& header : headers) {
-        html += "<th>" +
-                ToStdString(RenderInline(ToWxString(header), baseDirectory,
-                                         definition)) +
+      for (size_t headerIndex = 0; headerIndex < headers.size();
+           ++headerIndex) {
+        const TableAlignment alignment = headerIndex < alignments.size()
+                                             ? alignments[headerIndex]
+                                             : TableAlignment::None;
+        html += "<th" + TableAlignmentAttribute(alignment) + ">" +
+                ToStdString(RenderInline(ToWxString(headers[headerIndex]),
+                                         baseDirectory, definition)) +
                 "</th>";
       }
       html += "</tr></thead><tbody>\n";
@@ -342,10 +418,14 @@ wxString MarkdownRenderer::RenderDocument(
       while (i < lines.size() &&
              Trim(lines[i]).find('|') != std::string::npos) {
         html += "<tr>";
-        for (const auto& cell : SplitTableRow(lines[i])) {
-          html += "<td>" +
-                  ToStdString(RenderInline(ToWxString(cell), baseDirectory,
-                                           definition)) +
+        const std::vector<std::string> cells = SplitTableRow(lines[i]);
+        for (size_t cellIndex = 0; cellIndex < cells.size(); ++cellIndex) {
+          const TableAlignment alignment = cellIndex < alignments.size()
+                                               ? alignments[cellIndex]
+                                               : TableAlignment::None;
+          html += "<td" + TableAlignmentAttribute(alignment) + ">" +
+                  ToStdString(RenderInline(ToWxString(cells[cellIndex]),
+                                           baseDirectory, definition)) +
                   "</td>";
         }
         html += "</tr>\n";
@@ -468,6 +548,8 @@ wxString MarkdownRenderer::RenderInline(
       html, FindMarkdownTagDefinition(definition, MarkdownTag::Italic));
   html = ApplyInlineTag(
       html, FindMarkdownTagDefinition(definition, MarkdownTag::Strikethrough));
+  html = ApplyInlineTag(
+      html, FindMarkdownTagDefinition(definition, MarkdownTag::Highlight));
   html = ApplyInlineTag(
       html, FindMarkdownTagDefinition(definition, MarkdownTag::Subscript));
   html = ApplyInlineTag(

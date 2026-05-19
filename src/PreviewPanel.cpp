@@ -4,6 +4,8 @@
 #include <wx/html/htmprint.h>
 #include <wx/sizer.h>
 
+#include "EmbeddedResources.h"
+
 namespace {
 constexpr int PreviewDebounceMs = 400;
 }
@@ -92,7 +94,7 @@ void PreviewPanel::OnUpdateTimer(wxTimerEvent& event) {
 }
 
 wxString PreviewPanel::BuildHtmlPage(const wxString& renderedBody) const {
-  return R"(<!doctype html>
+  wxString page = R"(<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -151,15 +153,33 @@ th { background: #f1f5f9; text-align: left; }
 img { max-width: 100%; height: auto; }
 hr { border: 0; border-top: 1px solid #d8dee6; margin: 1.5em 0; }
 .glance-strike { text-decoration: line-through; }
+mark { background: #fff3a3; color: inherit; padding: 0.05em 0.2em; border-radius: 3px; }
 .task { list-style: none; margin-left: -1.2em; }
 .empty { color: #6b7280; }
+)" + wxString::FromUTF8(GetEmbeddedHighlightCss()) +
+                  R"(
 </style>
 </head>
 <body>
 )" + renderedBody +
-         R"(
+                  R"(
+)";
+#ifdef GLANCE_USE_WEBVIEW
+  page += R"(
+<script>
+)" + wxString::FromUTF8(GetEmbeddedHighlightJs()) +
+          R"(
+</script>
+<script>
+hljs.highlightAll();
+</script>
+)";
+#endif
+  page += R"(
 </body>
 </html>)";
+
+  return page;
 }
 
 wxString PreviewPanel::GetBasePath() const {

@@ -34,6 +34,7 @@ enum {
   ID_FORMAT_BOLD_ITALIC,
   ID_FORMAT_UNDERLINE,
   ID_FORMAT_STRIKETHROUGH,
+  ID_FORMAT_HIGHLIGHT,
   ID_FORMAT_SUBSCRIPT,
   ID_FORMAT_SUPERSCRIPT,
   ID_FORMAT_INLINE_CODE,
@@ -109,6 +110,9 @@ bool GetRequiredTagForMarkdownCommand(MarkdownCommand command,
     case MarkdownCommand::Strikethrough:
       *tag = MarkdownTag::Strikethrough;
       return true;
+    case MarkdownCommand::Highlight:
+      *tag = MarkdownTag::Highlight;
+      return true;
     case MarkdownCommand::Subscript:
       *tag = MarkdownTag::Subscript;
       return true;
@@ -165,6 +169,7 @@ const std::vector<MarkdownMenuCommand>& GetMarkdownMenuCommands() {
       {ID_FORMAT_ITALIC, MarkdownCommand::Italic},
       {ID_FORMAT_BOLD_ITALIC, MarkdownCommand::BoldItalic},
       {ID_FORMAT_STRIKETHROUGH, MarkdownCommand::Strikethrough},
+      {ID_FORMAT_HIGHLIGHT, MarkdownCommand::Highlight},
       {ID_FORMAT_SUBSCRIPT, MarkdownCommand::Subscript},
       {ID_FORMAT_SUPERSCRIPT, MarkdownCommand::Superscript},
       {ID_FORMAT_INLINE_CODE, MarkdownCommand::InlineCode},
@@ -331,6 +336,8 @@ void MainFrame::CreateMenuBar() {
                      "Wrap selection with bold italic Markdown");
   formatMenu->Append(ID_FORMAT_STRIKETHROUGH, "&Strikethrough",
                      "Wrap selection with strikethrough Markdown");
+  formatMenu->Append(ID_FORMAT_HIGHLIGHT, "&Highlight",
+                     "Wrap selection with highlight Markdown");
   formatMenu->Append(ID_FORMAT_SUBSCRIPT, "S&ubscript",
                      "Wrap selection with subscript Markdown");
   formatMenu->Append(ID_FORMAT_SUPERSCRIPT, "Su&perscript",
@@ -629,6 +636,9 @@ void MainFrame::OnFormatCommand(wxCommandEvent& event) {
       break;
     case ID_FORMAT_STRIKETHROUGH:
       ExecuteMarkdownCommand(MarkdownCommand::Strikethrough);
+      break;
+    case ID_FORMAT_HIGHLIGHT:
+      ExecuteMarkdownCommand(MarkdownCommand::Highlight);
       break;
     case ID_FORMAT_SUBSCRIPT:
       ExecuteMarkdownCommand(MarkdownCommand::Subscript);
@@ -1102,6 +1112,7 @@ void MainFrame::UpdateDocumentCommandState() {
       ID_FORMAT_ITALIC,
       ID_FORMAT_BOLD_ITALIC,
       ID_FORMAT_STRIKETHROUGH,
+      ID_FORMAT_HIGHLIGHT,
       ID_FORMAT_SUBSCRIPT,
       ID_FORMAT_SUPERSCRIPT,
       ID_FORMAT_INLINE_CODE,

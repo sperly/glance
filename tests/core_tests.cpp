@@ -148,12 +148,13 @@ void TestDocumentManagerDoesNotKeepFailedOpen() {
 
 void TestMarkdownRendererCoreFeatures() {
   MarkdownRenderer renderer;
-  const wxString html =
-      renderer.RenderDocument("# Heading\n\n~~gone~~\n\n- [x] done\n");
+  const wxString html = renderer.RenderDocument(
+      "# Heading\n\n~~gone~~\n\n==marked==\n\n- [x] done\n");
 
   ExpectContains(html, "<h1>Heading</h1>", "heading renders as h1");
   ExpectContains(html, "class=\"glance-strike\"",
                  "strikethrough class is emitted");
+  ExpectContains(html, "<mark>marked</mark>", "highlight renders as mark tag");
   ExpectContains(html, "type=\"checkbox\" disabled checked",
                  "checked task item renders as disabled checkbox");
 }
@@ -187,12 +188,32 @@ void TestMarkdownRendererRendersTablesWithInlineContent() {
       renderer.RenderDocument("| A | B |\n| --- | :--- |\n| **x** | `y` |\n");
 
   ExpectContains(html,
-                 "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody>",
+                 "<table><thead><tr><th>A</th><th style=\"text-align: "
+                 "left;\">B</th></tr></thead><tbody>",
                  "table header renders");
   ExpectContains(html, "<td><strong>x</strong></td>",
                  "table cell renders bold inline content");
-  ExpectContains(html, "<td><code>y</code></td>",
+  ExpectContains(html, "<td style=\"text-align: left;\"><code>y</code></td>",
                  "table cell renders code inline content");
+}
+
+void TestMarkdownRendererRendersTableAlignment() {
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument(
+      "| Left | Center | Right |\n| :--- | :---: | ---: |\n| a | b | c |\n");
+
+  ExpectContains(html, "<th style=\"text-align: left;\">Left</th>",
+                 "left-aligned table header renders");
+  ExpectContains(html, "<th style=\"text-align: center;\">Center</th>",
+                 "center-aligned table header renders");
+  ExpectContains(html, "<th style=\"text-align: right;\">Right</th>",
+                 "right-aligned table header renders");
+  ExpectContains(html, "<td style=\"text-align: left;\">a</td>",
+                 "left-aligned table cell renders");
+  ExpectContains(html, "<td style=\"text-align: center;\">b</td>",
+                 "center-aligned table cell renders");
+  ExpectContains(html, "<td style=\"text-align: right;\">c</td>",
+                 "right-aligned table cell renders");
 }
 
 void TestMarkdownRendererClosesListWhenListTypeChanges() {
@@ -259,11 +280,14 @@ void TestMarkdownRendererKeepsAbsoluteRemoteAndAnchorImagePaths() {
 void TestMarkdownRendererUsesVanillaFlavor() {
   MarkdownRenderer renderer;
   const wxString html = renderer.RenderDocument(
-      "~~gone~~\n\n- [x] done\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n",
+      "~~gone~~\n\n==marked==\n\n- [x] done\n\n| A | B |\n| --- | --- |\n| 1 | "
+      "2 |\n",
       wxString(), MarkdownFlavor::Vanilla);
 
   ExpectNotContains(html, "class=\"glance-strike\"",
                     "vanilla flavor does not render strikethrough extension");
+  ExpectNotContains(html, "<mark>",
+                    "vanilla flavor does not render highlight extension");
   ExpectNotContains(html, "type=\"checkbox\"",
                     "vanilla flavor does not render task list extension");
   ExpectNotContains(html, "<table>",
@@ -273,10 +297,11 @@ void TestMarkdownRendererUsesVanillaFlavor() {
 void TestMarkdownValidatorFlagsUnsupportedVanillaExtensions() {
   MarkdownValidator validator;
   const std::vector<MarkdownDiagnostic> diagnostics = validator.Validate(
-      "~~gone~~\n\n- [x] done\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n",
+      "~~gone~~\n\n==marked==\n\n- [x] done\n\n| A | B |\n| --- | --- |\n| 1 | "
+      "2 |\n",
       MarkdownFlavor::Vanilla);
 
-  Expect(diagnostics.size() == 3,
+  Expect(diagnostics.size() == 4,
          "vanilla validator flags each unsupported GitHub extension");
 }
 
@@ -303,9 +328,12 @@ void TestMarkdownRendererRendersSubscriptAndSuperscript() {
 
 void TestMarkdownRendererHandlesGithubLanguageFences() {
   MarkdownRenderer renderer;
-  const wxString html = renderer.RenderDocument("```sh\nprintf '<ok>'\n```\n");
+  const wxString html =
+      renderer.RenderDocument("```sh shell example\nprintf '<ok>'\n```\n");
 
-  ExpectContains(html, "<pre><code>printf '&lt;ok&gt;'\n</code></pre>",
+  ExpectContains(html,
+                 "<pre><code class=\"language-sh\">printf '&lt;ok&gt;'\n"
+                 "</code></pre>",
                  "github language-labelled fenced code block renders");
   ExpectNotContains(html, "<p>```sh", "opening code fence is not rendered");
   ExpectNotContains(html, "<p>```</p>", "closing code fence is not rendered");
@@ -361,6 +389,7 @@ int main() {
   TestMarkdownRendererEscapesHtml();
   TestMarkdownRendererKeepsFormattingOutOfCodeSpans();
   TestMarkdownRendererRendersTablesWithInlineContent();
+  TestMarkdownRendererRendersTableAlignment();
   TestMarkdownRendererClosesListWhenListTypeChanges();
   TestMarkdownRendererResolvesNestedRelativeImagePaths();
   TestMarkdownRendererKeepsAbsoluteRemoteAndAnchorImagePaths();

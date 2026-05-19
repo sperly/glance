@@ -12,6 +12,8 @@ endfunction()
 
 function(glance_configure_embedded_resources output_source)
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/resources/help.md" GLANCE_HELP_MARKDOWN)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/resources/highlight/highlight.min.js" GLANCE_HIGHLIGHT_JS)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/resources/highlight/github-dark.min.css" GLANCE_HIGHLIGHT_CSS)
     glance_read_binary_resource(
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/glance-icon.png"
         GLANCE_ICON_PNG_BYTES
