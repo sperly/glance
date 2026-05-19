@@ -61,7 +61,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libwxgtk3.2-dev
+        sudo apt-get install -y dpkg-dev libwxgtk3.2-dev
 
     - name: Install dependencies (Windows)
       if: runner.os == 'Windows'
@@ -87,3 +87,15 @@ jobs:
       # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --build-config ${{ matrix.build_type }}
+
+    - name: Build DEB package
+      if: runner.os == 'Linux' && matrix.c_compiler == 'gcc'
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --target package
+
+    - name: Store DEB package
+      if: runner.os == 'Linux' && matrix.c_compiler == 'gcc'
+      uses: actions/upload-artifact@v4
+      with:
+        name: glance-deb-package
+        path: ${{ steps.strings.outputs.build-output-dir }}/*.deb
+        if-no-files-found: error
