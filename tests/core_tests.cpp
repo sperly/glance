@@ -182,6 +182,40 @@ void TestMarkdownRendererKeepsFormattingOutOfCodeSpans() {
                     "bold formatting is not applied inside inline code");
 }
 
+void TestMarkdownRendererRendersEscapedMarkdownCharacters() {
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument(
+      "\\# Not a heading\n\n"
+      "\\- Not a list item\n\n"
+      "\\_italic\\_ and \\*bold\\* and \\\\ backslash\n\n"
+      "\\[label\\]\\(target\\) and \\!\\[alt\\]\\(image.png\\)\n\n"
+      "keep\\ \\ \\ distance\n\n"
+      "`\\*code\\*`");
+
+  ExpectContains(html, "<p># Not a heading</p>",
+                 "escaped heading marker renders as text");
+  ExpectNotContains(html, "<h1>Not a heading</h1>",
+                    "escaped heading marker does not render heading");
+  ExpectContains(html, "<p>- Not a list item</p>",
+                 "escaped list marker renders as text");
+  ExpectNotContains(html, "<li>Not a list item</li>",
+                    "escaped list marker does not render list item");
+  ExpectContains(html, "<p>_italic_ and *bold* and \\ backslash</p>",
+                 "escaped inline formatting characters render as text");
+  ExpectNotContains(html, "<em>italic</em>",
+                    "escaped underscores do not render emphasis");
+  ExpectNotContains(html, "<strong>bold</strong>",
+                    "escaped asterisks do not render bold");
+  ExpectContains(html, "<p>[label](target) and ![alt](image.png)</p>",
+                 "escaped link and image punctuation renders as text");
+  ExpectNotContains(html, "<a href=", "escaped link does not render anchor");
+  ExpectNotContains(html, "<img ", "escaped image does not render image");
+  ExpectContains(html, "<p>keep&nbsp;&nbsp;&nbsp;distance</p>",
+                 "escaped spaces render as non-breaking spaces");
+  ExpectContains(html, "<code>\\*code\\*</code>",
+                 "code span preserves literal backslash escapes");
+}
+
 void TestMarkdownRendererRendersTablesWithInlineContent() {
   MarkdownRenderer renderer;
   const wxString html =
@@ -388,6 +422,7 @@ int main() {
   TestMarkdownRendererCoreFeatures();
   TestMarkdownRendererEscapesHtml();
   TestMarkdownRendererKeepsFormattingOutOfCodeSpans();
+  TestMarkdownRendererRendersEscapedMarkdownCharacters();
   TestMarkdownRendererRendersTablesWithInlineContent();
   TestMarkdownRendererRendersTableAlignment();
   TestMarkdownRendererClosesListWhenListTypeChanges();

@@ -72,6 +72,39 @@ bool StartsWith(const std::string& value, const std::string& prefix) {
   return value.rfind(prefix, 0) == 0;
 }
 
+bool IsMarkdownEscapableCharacter(char ch) {
+  switch (ch) {
+    case '\\':
+    case '`':
+    case '*':
+    case '_':
+    case '{':
+    case '}':
+    case '[':
+    case ']':
+    case '(':
+    case ')':
+    case '#':
+    case '+':
+    case '-':
+    case '.':
+    case '!':
+    case ' ':
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool StartsWithEscapedMarkdownCharacter(const std::string& value) {
+  const auto firstNonSpace =
+      std::find_if_not(value.begin(), value.end(),
+                       [](unsigned char ch) { return std::isspace(ch); });
+  return firstNonSpace != value.end() && *firstNonSpace == '\\' &&
+         std::next(firstNonSpace) != value.end() &&
+         IsMarkdownEscapableCharacter(*std::next(firstNonSpace));
+}
+
 std::string ApplyTemplate(
     std::string htmlTemplate,
     const std::vector<std::pair<std::string, std::string>>& replacements) {
@@ -310,6 +343,43 @@ std::string RestoreCodeSpans(std::string html,
 
   return html;
 }
+
+std::string ProtectEscapedMarkdownCharacters(
+    const std::string& html, std::vector<std::string>* escapedCharacters) {
+  std::string protectedHtml;
+  protectedHtml.reserve(html.size());
+
+  for (size_t i = 0; i < html.size(); ++i) {
+    if (html[i] == '\\' && i + 1 < html.size() &&
+        IsMarkdownEscapableCharacter(html[i + 1])) {
+      const std::string placeholder =
+          "\x1e" + std::to_string(escapedCharacters->size()) + "\x1e";
+      escapedCharacters->push_back(
+          html[i + 1] == ' ' ? "&nbsp;" : std::string(1, html[i + 1]));
+      protectedHtml += placeholder;
+      ++i;
+      continue;
+    }
+
+    protectedHtml += html[i];
+  }
+
+  return protectedHtml;
+}
+
+std::string RestoreEscapedMarkdownCharacters(
+    std::string html, const std::vector<std::string>& escapedCharacters) {
+  for (size_t i = 0; i < escapedCharacters.size(); ++i) {
+    const std::string placeholder = "\x1e" + std::to_string(i) + "\x1e";
+    size_t position = 0;
+    while ((position = html.find(placeholder, position)) != std::string::npos) {
+      html.replace(position, placeholder.length(), escapedCharacters[i]);
+      position += escapedCharacters[i].length();
+    }
+  }
+
+  return html;
+}
 }  // namespace
 
 wxString MarkdownRenderer::RenderDocument(const wxString& markdown,
@@ -436,7 +506,8 @@ wxString MarkdownRenderer::RenderDocument(
       continue;
     }
 
-    if (MatchTag(definition, MarkdownTag::Heading, trimmed, &match)) {
+    if (!StartsWithEscapedMarkdownCharacter(trimmed) &&
+        MatchTag(definition, MarkdownTag::Heading, trimmed, &match)) {
       closeParagraph();
       closeLists();
       const MarkdownTagDefinition* headingRule =
@@ -449,7 +520,8 @@ wxString MarkdownRenderer::RenderDocument(
       continue;
     }
 
-    if (MatchTag(definition, MarkdownTag::HorizontalRule, trimmed)) {
+    if (!StartsWithEscapedMarkdownCharacter(trimmed) &&
+        MatchTag(definition, MarkdownTag::HorizontalRule, trimmed)) {
       closeParagraph();
       closeLists();
       html += FindMarkdownTagDefinition(definition, MarkdownTag::HorizontalRule)
@@ -457,7 +529,8 @@ wxString MarkdownRenderer::RenderDocument(
       continue;
     }
 
-    if (MatchTag(definition, MarkdownTag::Blockquote, trimmed, &match)) {
+    if (!StartsWithEscapedMarkdownCharacter(trimmed) &&
+        MatchTag(definition, MarkdownTag::Blockquote, trimmed, &match)) {
       closeParagraph();
       closeLists();
       const MarkdownTagDefinition* blockquoteRule =
@@ -470,11 +543,11 @@ wxString MarkdownRenderer::RenderDocument(
     }
 
     const bool unordered =
-        unorderedListRule &&
+        unorderedListRule && !StartsWithEscapedMarkdownCharacter(line) &&
         MatchTag(definition, MarkdownTag::UnorderedList, line, &match);
     const std::smatch unorderedMatch = match;
     const bool ordered =
-        orderedListRule &&
+        orderedListRule && !StartsWithEscapedMarkdownCharacter(line) &&
         MatchTag(definition, MarkdownTag::OrderedList, line, &match);
     if (unordered || ordered) {
       closeParagraph();
@@ -535,6 +608,9 @@ wxString MarkdownRenderer::RenderInline(
     html = ProtectInlineTag(html, *inlineCodeRule, &codeSpans);
   }
 
+  std::vector<std::string> escapedCharacters;
+  html = ProtectEscapedMarkdownCharacters(html, &escapedCharacters);
+
   html = ApplyInlineTag(
       html, FindMarkdownTagDefinition(definition, MarkdownTag::Image));
   html = ResolveImagePaths(html, baseDirectory);
@@ -554,6 +630,7 @@ wxString MarkdownRenderer::RenderInline(
       html, FindMarkdownTagDefinition(definition, MarkdownTag::Subscript));
   html = ApplyInlineTag(
       html, FindMarkdownTagDefinition(definition, MarkdownTag::Superscript));
+  html = RestoreEscapedMarkdownCharacters(std::move(html), escapedCharacters);
   html = RestoreCodeSpans(std::move(html), codeSpans);
 
   return ToWxString(html);

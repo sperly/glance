@@ -65,6 +65,11 @@ In GitHub Markdown mode, the preview supports common Markdown structures:
 - Links and images
 - Horizontal rules
 
+Backslash escapes are honored for Markdown special characters, so escaped
+syntax such as `\#`, `\*text\*`, `\[label\]\(target\)`, and `\- item`
+renders as literal text instead of headings, emphasis, links, or lists. Escaped
+spaces are preserved in the preview.
+
 Vanilla Markdown mode supports the core Markdown subset without GitHub-specific extensions such as tables, task lists, strikethrough, subscript, and superscript.
 
 Image paths are resolved relative to the Markdown file location when possible.
