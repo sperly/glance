@@ -165,19 +165,24 @@ std::vector<std::string> SplitLines(const std::string& text) {
 }
 
 std::vector<std::string> SplitTableRow(const std::string& line) {
-  std::string trimmed = Trim(line);
-  if (!trimmed.empty() && trimmed.front() == '|') {
-    trimmed.erase(trimmed.begin());
+  std::string body = Trim(line);
+  if (!body.empty() && body.front() == '|') {
+    body.erase(body.begin());
   }
-  if (!trimmed.empty() && trimmed.back() == '|') {
-    trimmed.pop_back();
+  if (!body.empty() && body.back() == '|') {
+    body.pop_back();
   }
 
   std::vector<std::string> cells;
-  std::stringstream stream(trimmed);
-  std::string cell;
-  while (std::getline(stream, cell, '|')) {
-    cells.push_back(Trim(cell));
+  size_t start = 0;
+  while (start <= body.size()) {
+    const size_t separator = body.find('|', start);
+    const size_t end = separator == std::string::npos ? body.size() : separator;
+    cells.push_back(Trim(body.substr(start, end - start)));
+    if (separator == std::string::npos) {
+      break;
+    }
+    start = separator + 1;
   }
 
   return cells;

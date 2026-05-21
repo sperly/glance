@@ -46,6 +46,7 @@ class MainFrame : public wxFrame {
   void OnPreviewZoomIn(wxCommandEvent& event);
   void OnPreviewZoomOut(wxCommandEvent& event);
   void OnPreviewZoomReset(wxCommandEvent& event);
+  void OnEditSearchReplace(wxCommandEvent& event);
   void OnFormatCommand(wxCommandEvent& event);
   void OnInsertCommand(wxCommandEvent& event);
   void OnDocumentSettings(wxCommandEvent& event);

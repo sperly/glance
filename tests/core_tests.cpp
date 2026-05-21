@@ -250,6 +250,19 @@ void TestMarkdownRendererRendersTableAlignment() {
                  "right-aligned table cell renders");
 }
 
+void TestMarkdownRendererPreservesEmptyTableCells() {
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument(
+      "| Empty | Address | Name | Description | Reserved |\n"
+      "| --- | --- | --- | --- | --- |\n"
+      "||$F42B|ACR|Aux Control Register||\n");
+
+  ExpectContains(html,
+                 "<tr><td></td><td>$F42B</td><td>ACR</td><td>Aux Control "
+                 "Register</td><td></td></tr>",
+                 "empty table cells render without spaces between pipes");
+}
+
 void TestMarkdownRendererClosesListWhenListTypeChanges() {
   MarkdownRenderer renderer;
   const wxString html =
@@ -425,6 +438,7 @@ int main() {
   TestMarkdownRendererRendersEscapedMarkdownCharacters();
   TestMarkdownRendererRendersTablesWithInlineContent();
   TestMarkdownRendererRendersTableAlignment();
+  TestMarkdownRendererPreservesEmptyTableCells();
   TestMarkdownRendererClosesListWhenListTypeChanges();
   TestMarkdownRendererResolvesNestedRelativeImagePaths();
   TestMarkdownRendererKeepsAbsoluteRemoteAndAnchorImagePaths();

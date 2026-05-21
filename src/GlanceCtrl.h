@@ -50,6 +50,12 @@ class GlanceCtrl : public wxStyledTextCtrl {
   void SaveToDocument();
   void SetEditorFont(const wxFont& font);
   wxString GetEditorStatus() const;
+  bool FindNextText(const wxString& searchText, bool matchCase, bool wrap);
+  bool ReplaceNextText(const wxString& searchText,
+                       const wxString& replacementText, bool matchCase,
+                       bool wrap);
+  int ReplaceAllText(const wxString& searchText,
+                     const wxString& replacementText, bool matchCase);
   void ExecuteMarkdownCommand(MarkdownCommand command,
                               const wxString& argument = wxString(),
                               const wxString& secondaryArgument = wxString());

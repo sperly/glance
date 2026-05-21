@@ -53,6 +53,84 @@ wxString GlanceCtrl::GetEditorStatus() const {
                           column, selectionLength, GetTextLength());
 }
 
+bool GlanceCtrl::FindNextText(const wxString& searchText, bool matchCase,
+                              bool wrap) {
+  if (searchText.empty()) {
+    return false;
+  }
+
+  SetSearchFlags(matchCase ? wxSTC_FIND_MATCHCASE : 0);
+
+  const int searchStart = GetSelectionEnd();
+  SetTargetStart(searchStart);
+  SetTargetEnd(GetTextLength());
+
+  int position = SearchInTarget(searchText);
+  if (position == wxSTC_INVALID_POSITION && wrap && searchStart > 0) {
+    SetTargetStart(0);
+    SetTargetEnd(searchStart);
+    position = SearchInTarget(searchText);
+  }
+
+  if (position == wxSTC_INVALID_POSITION) {
+    return false;
+  }
+
+  SetSelection(GetTargetStart(), GetTargetEnd());
+  EnsureCaretVisible();
+  return true;
+}
+
+bool GlanceCtrl::ReplaceNextText(const wxString& searchText,
+                                 const wxString& replacementText,
+                                 bool matchCase, bool wrap) {
+  if (searchText.empty()) {
+    return false;
+  }
+
+  wxString selectedText = GetSelectedText();
+  const bool selectionMatches =
+      matchCase ? selectedText == searchText
+                : selectedText.Lower() == searchText.Lower();
+  if (!selectionMatches && !FindNextText(searchText, matchCase, wrap)) {
+    return false;
+  }
+
+  BeginUndoAction();
+  ReplaceSelection(replacementText);
+  EndUndoAction();
+  return true;
+}
+
+int GlanceCtrl::ReplaceAllText(const wxString& searchText,
+                               const wxString& replacementText,
+                               bool matchCase) {
+  if (searchText.empty()) {
+    return 0;
+  }
+
+  SetSearchFlags(matchCase ? wxSTC_FIND_MATCHCASE : 0);
+
+  int replacements = 0;
+  int searchStart = 0;
+  BeginUndoAction();
+  while (searchStart <= GetTextLength()) {
+    SetTargetStart(searchStart);
+    SetTargetEnd(GetTextLength());
+
+    if (SearchInTarget(searchText) == wxSTC_INVALID_POSITION) {
+      break;
+    }
+
+    ReplaceTarget(replacementText);
+    ++replacements;
+    searchStart = GetTargetEnd();
+  }
+  EndUndoAction();
+
+  return replacements;
+}
+
 void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
                                         const wxString& argument,
                                         const wxString& secondaryArgument) {

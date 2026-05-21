@@ -113,6 +113,7 @@ Use:
 - `File > Save File` to save the current tab.
 - `File > Save All` to save all modified tabs.
 - `File > Close Tab` to close the current tab.
+- `Edit > Search and Replace` to find text, replace the current match, or replace all matches in the current tab.
 
 When closing a modified tab, switching folders, or exiting the app, Glance asks whether to save changes.
 Document editing, insertion, saving, closing, preview export, and printing commands are disabled when no document is open.
@@ -213,6 +214,7 @@ If text is selected, inserted snippets are placed before the selected text inste
 | `Ctrl+C` | Copy |
 | `Ctrl+V` | Paste |
 | `Ctrl+A` | Select All |
+| `Ctrl+H` | Search and Replace |
 | `Ctrl+B` | Bold |
 | `Ctrl+I` | Italic |
 | `Ctrl+K` | Insert Link |
