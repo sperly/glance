@@ -282,8 +282,12 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
                             OnPreviewZoomIn) EVT_MENU(ID_PREVIEW_ZOOM_OUT,
                                                       MainFrame::
                                                           OnPreviewZoomOut)
-                        EVT_MENU(ID_PREVIEW_ZOOM_RESET,
-                                 MainFrame::OnPreviewZoomReset)
+                        EVT_MENU(
+                            ID_PREVIEW_ZOOM_RESET,
+                            MainFrame::
+                                OnPreviewZoomReset) EVT_MENU(ID_EDIT_SEARCH_REPLACE,
+                                                             MainFrame::
+                                                                 OnEditSearchReplace)
                             EVT_MENU_RANGE(ID_FORMAT_BOLD,
                                            ID_FORMAT_CLEAR_FORMATTING,
                                            MainFrame::OnFormatCommand)
@@ -305,43 +309,6 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
                                                         EVT_CLOSE(
                                                             MainFrame::OnClose)
                                                             EVT_ACTIVATE(
-            EVT_MENU(
-                ID_CLEAR_RECENT_ITEMS,
-                MainFrame::OnClearRecentItems) EVT_MENU(wxID_UNDO,
-                                                        MainFrame::OnEditUndo)
-                EVT_MENU(wxID_REDO, MainFrame::OnEditRedo) EVT_MENU(
-                    wxID_CUT,
-                    MainFrame::OnEditCut) EVT_MENU(wxID_COPY,
-                                                   MainFrame::OnEditCopy)
-                    EVT_MENU(wxID_PASTE, MainFrame::OnEditPaste) EVT_MENU(
-                        wxID_SELECTALL,
-                        MainFrame::
-                            OnEditSelectAll) EVT_MENU(ID_EDIT_SEARCH_REPLACE,
-                                                      MainFrame::
-                                                          OnEditSearchReplace)
-                        EVT_MENU_RANGE(ID_FORMAT_BOLD,
-                                       ID_FORMAT_CLEAR_FORMATTING,
-                                       MainFrame::OnFormatCommand)
-                            EVT_MENU_RANGE(ID_INSERT_LINK, ID_INSERT_TOC,
-                                           MainFrame::OnInsertCommand)
-                                EVT_MENU(ID_DOCUMENT_SETTINGS,
-                                         MainFrame::OnDocumentSettings)
-                                    EVT_MENU(ID_DOCUMENT_VALIDATE,
-                                             MainFrame::OnDocumentValidate)
-                                        EVT_MENU(ID_HELP_SHOW_HELP,
-                                                 MainFrame::OnHelpShowHelp)
-                                            EVT_MENU(ID_HELP_SAVE_PREVIEW_HTML,
-                                                     MainFrame::
-                                                         OnHelpSavePreviewHtml)
-                                                EVT_MENU(wxID_ABOUT,
-                                                         MainFrame::OnHelpAbout)
-                                                    EVT_CLOSE(
-                                                        MainFrame::OnClose)
-                                                        EVT_ACTIVATE(
-                                                            MainFrame::
-                                                                OnActivate)
-                                                            wxEND_EVENT_TABLE()
-
                                                                 MainFrame::
                                                                     OnActivate)
                                                                 wxEND_EVENT_TABLE()
@@ -791,6 +758,8 @@ void MainFrame::OnPreviewZoomReset(wxCommandEvent& event) {
     m_previewPanel->ResetZoom();
     SetStatusText("Preview zoom reset", 0);
   }
+}
+
 void MainFrame::OnEditSearchReplace(wxCommandEvent& event) {
   if (!m_editorNotebook->GetCurrentDocument()) {
     wxMessageBox("No document is open.", "Search and Replace",
