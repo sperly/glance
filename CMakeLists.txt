@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(glance VERSION 1.3.0)
+project(glance-mde VERSION 1.3.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,41 +14,41 @@ include(GlanceFormat)
 
 set(GLANCE_APP_SOURCES
     src/main.cpp
-    src/EmbeddedResources.h
+    # src/EmbeddedResources.h
     src/GlanceApp.cpp
-    src/GlanceApp.h
+    # src/GlanceApp.h
     src/AboutDialog.cpp
-    src/AboutDialog.h
+    # src/AboutDialog.h
     src/MainFrame.cpp
-    src/MainFrame.h
+    # src/MainFrame.h
     src/FileTreePanel.cpp
-    src/FileTreePanel.h
+    # src/FileTreePanel.h
     src/Document.cpp
-    src/Document.h
+    # src/Document.h
     src/DocumentSettingsDialog.cpp
-    src/DocumentSettingsDialog.h
+    # src/DocumentSettingsDialog.h
     src/DocumentManager.cpp
-    src/DocumentManager.h
+    # src/DocumentManager.h
     src/EditorNotebook.cpp
-    src/EditorNotebook.h
+    # src/EditorNotebook.h
     src/GlanceCtrl.cpp
-    src/GlanceCtrl.h
+    # src/GlanceCtrl.h
     src/HelpDialog.cpp
-    src/HelpDialog.h
+    # src/HelpDialog.h
     src/MarkdownRenderer.cpp
-    src/MarkdownRenderer.h
+    # src/MarkdownRenderer.h
     src/MarkdownFlavor.cpp
-    src/MarkdownFlavor.h
+    # src/MarkdownFlavor.h
     src/MarkdownValidator.cpp
-    src/MarkdownValidator.h
+    # src/MarkdownValidator.h
     src/PreviewPanel.cpp
-    src/PreviewPanel.h
+    # src/PreviewPanel.h
     src/ResourcePaths.cpp
-    src/ResourcePaths.h
+    # src/ResourcePaths.h
     src/SearchReplaceDialog.cpp
-    src/SearchReplaceDialog.h
+    # src/SearchReplaceDialog.h
     src/SettingsManager.cpp
-    src/SettingsManager.h
+    # src/SettingsManager.h
 )
 
 set(GLANCE_FORMAT_SOURCES
@@ -63,16 +63,16 @@ include(${wxWidgets_USE_FILE})
 glance_configure_embedded_resources(GLANCE_EMBEDDED_RESOURCES_SOURCE)
 
 # Add executable
-add_executable(glance WIN32
+add_executable(${PROJECT_NAME} WIN32
     ${GLANCE_APP_SOURCES}
     ${GLANCE_EMBEDDED_RESOURCES_SOURCE}
 )
 
 # Link wxWidgets libraries
-target_link_libraries(glance ${wxWidgets_LIBRARIES})
-glance_configure_webview(glance)
+target_link_libraries(${PROJECT_NAME} ${wxWidgets_LIBRARIES})
+glance_configure_webview(${PROJECT_NAME})
 
-target_compile_definitions(glance
+target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         GLANCE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
         GLANCE_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
@@ -82,9 +82,9 @@ target_compile_definitions(glance
 )
 
 # Include directories
-target_include_directories(glance PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE src ${CMAKE_CURRENT_BINARY_DIR})
 
-glance_configure_packaging(glance)
+glance_configure_packaging(${PROJECT_NAME})
 
 glance_add_format_targets(${GLANCE_FORMAT_SOURCES})
 
