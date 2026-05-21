@@ -2,6 +2,7 @@
 #define EDITOR_NOTEBOOK_H
 
 #include <wx/aui/aui.h>
+#include <wx/font.h>
 #include <wx/stc/stc.h>
 
 #include "DocumentManager.h"
@@ -24,6 +25,8 @@ class EditorNotebook : public wxAuiNotebook {
   void CloseAllWithoutPrompt();
   bool HasModifiedDocuments() const;
   bool CheckForExternalChanges(wxWindow* parent);
+  void SetEditorFont(const wxFont& font);
+  wxFont GetEditorFont() const;
 
   GlanceCtrl* GetCurrentEditor() const;
   Document* GetCurrentDocument() const;
@@ -57,6 +60,7 @@ class EditorNotebook : public wxAuiNotebook {
 
   DocumentManager m_documentManager;
   bool m_closingProgrammatically;
+  wxFont m_editorFont;
 };
 
 #endif  // EDITOR_NOTEBOOK_H

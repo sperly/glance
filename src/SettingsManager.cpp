@@ -3,11 +3,22 @@
 #include <wx/config.h>
 #include <wx/dir.h>
 #include <wx/filename.h>
+#include <wx/font.h>
+
+#include <algorithm>
 
 #include "DocumentManager.h"
 
 namespace {
 constexpr long MaxRecentItems = 10;
+constexpr int DefaultEditorFontSize = 10;
+constexpr int MinEditorFontSize = 6;
+constexpr int MaxEditorFontSize = 72;
+
+wxFont MakeDefaultEditorFont() {
+  return wxFont(
+      wxFontInfo(DefaultEditorFontSize).Family(wxFONTFAMILY_TELETYPE));
+}
 
 wxString NormalizeExistingPath(const wxString& path) {
   wxFileName fileName(path);
@@ -51,6 +62,40 @@ void SettingsManager::SaveWindowSettings(const WindowSettings& settings) const {
   config.Write("Maximized", settings.maximized);
   config.Write("FileTreeSash", settings.fileTreeSash);
   config.Write("PreviewSash", settings.previewSash);
+  config.Flush();
+}
+
+wxFont SettingsManager::LoadEditorFont() const {
+  wxConfig config("Glance");
+  config.SetPath("/Editor");
+
+  wxString faceName;
+  long pointSize = DefaultEditorFontSize;
+  config.Read("FontFaceName", &faceName);
+  config.Read("FontPointSize", &pointSize, DefaultEditorFontSize);
+  pointSize = std::clamp(pointSize, static_cast<long>(MinEditorFontSize),
+                         static_cast<long>(MaxEditorFontSize));
+
+  wxFontInfo fontInfo(static_cast<int>(pointSize));
+  if (!faceName.empty()) {
+    fontInfo.FaceName(faceName);
+  } else {
+    fontInfo.Family(wxFONTFAMILY_TELETYPE);
+  }
+
+  wxFont font(fontInfo);
+  return font.IsOk() ? font : MakeDefaultEditorFont();
+}
+
+void SettingsManager::SaveEditorFont(const wxFont& font) const {
+  if (!font.IsOk()) {
+    return;
+  }
+
+  wxConfig config("Glance");
+  config.SetPath("/Editor");
+  config.Write("FontFaceName", font.GetFaceName());
+  config.Write("FontPointSize", font.GetPointSize());
   config.Flush();
 }
 

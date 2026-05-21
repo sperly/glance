@@ -4,12 +4,15 @@
 #include <wx/filedlg.h>
 #include <wx/filefn.h>
 #include <wx/filename.h>
+#include <wx/fontdlg.h>
 #include <wx/icon.h>
 #include <wx/image.h>
 #include <wx/mstream.h>
 #include <wx/numdlg.h>
+#include <wx/stattext.h>
 #include <wx/textdlg.h>
 
+#include <iterator>
 #include <vector>
 
 #include "AboutDialog.h"
@@ -70,6 +73,10 @@ enum {
   ID_INSERT_TOC,
   ID_DOCUMENT_SETTINGS,
   ID_DOCUMENT_VALIDATE,
+  ID_EDITOR_FONT,
+  ID_PREVIEW_ZOOM_IN,
+  ID_PREVIEW_ZOOM_OUT,
+  ID_PREVIEW_ZOOM_RESET,
   ID_HELP_SHOW_HELP,
   ID_HELP_SAVE_PREVIEW_HTML,
   ID_RECENT_FILE_BASE,
@@ -93,6 +100,41 @@ wxString ToMarkdownPath(wxString path) {
 struct MarkdownMenuCommand {
   int menuId;
   MarkdownCommand command;
+};
+
+class GlanceStatusBar : public wxStatusBar {
+ public:
+  explicit GlanceStatusBar(wxWindow* parent)
+      : wxStatusBar(parent, wxID_ANY, wxSTB_DEFAULT_STYLE),
+        m_zoomLabel(new wxStaticText(this, wxID_ANY, wxString(),
+                                     wxDefaultPosition, wxDefaultSize,
+                                     wxALIGN_RIGHT)) {
+    m_zoomLabel->SetBackgroundColour(GetBackgroundColour());
+    Bind(wxEVT_SIZE, &GlanceStatusBar::OnSize, this);
+  }
+
+  void SetZoomText(const wxString& text) {
+    m_zoomLabel->SetLabel(text);
+    PositionZoomLabel();
+  }
+
+ private:
+  void OnSize(wxSizeEvent& event) {
+    PositionZoomLabel();
+    event.Skip();
+  }
+
+  void PositionZoomLabel() {
+    wxRect rect;
+    if (!GetFieldRect(2, rect)) {
+      return;
+    }
+
+    rect.Deflate(4, 0);
+    m_zoomLabel->SetSize(rect);
+  }
+
+  wxStaticText* m_zoomLabel;
 };
 
 bool GetRequiredTagForMarkdownCommand(MarkdownCommand command,
@@ -200,60 +242,73 @@ const std::vector<MarkdownMenuCommand>& GetMarkdownMenuCommands() {
 }  // namespace
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
-    ID_NEW_FILE, MainFrame::OnFileNewFile) EVT_MENU(ID_OPEN_FOLDER,
-                                                    MainFrame::OnFileOpenFolder)
-    EVT_MENU(wxID_OPEN, MainFrame::OnFileOpenFile) EVT_MENU(
-        wxID_SAVE,
+    ID_NEW_FILE,
+    MainFrame::
+        OnFileNewFile) EVT_MENU(ID_OPEN_FOLDER,
+                                MainFrame::
+                                    OnFileOpenFolder) EVT_MENU(wxID_OPEN,
+                                                               MainFrame::
+                                                                   OnFileOpenFile)
+    EVT_MENU(wxID_SAVE, MainFrame::OnFileSave) EVT_MENU(
+        ID_SAVE_ALL,
         MainFrame::
-            OnFileSave) EVT_MENU(ID_SAVE_ALL,
-                                 MainFrame::
-                                     OnFileSaveAll) EVT_MENU(ID_CLOSE_TAB,
-                                                             MainFrame::
-                                                                 OnFileCloseTab)
-        EVT_MENU(wxID_PRINT, MainFrame::OnFilePrint) EVT_MENU(
-            wxID_EXIT,
-            MainFrame::OnFileExit) EVT_MENU_RANGE(ID_RECENT_FILE_BASE,
-                                                  ID_RECENT_FILE_LAST,
-                                                  MainFrame::OnRecentFile)
-            EVT_MENU_RANGE(
-                ID_RECENT_FOLDER_BASE, ID_RECENT_FOLDER_LAST,
-                MainFrame::OnRecentFolder) EVT_MENU(ID_CLEAR_RECENT_ITEMS,
+            OnFileSaveAll) EVT_MENU(ID_CLOSE_TAB,
+                                    MainFrame::
+                                        OnFileCloseTab) EVT_MENU(wxID_PRINT,
+                                                                 MainFrame::
+                                                                     OnFilePrint)
+        EVT_MENU(wxID_EXIT, MainFrame::OnFileExit) EVT_MENU_RANGE(
+            ID_RECENT_FILE_BASE, ID_RECENT_FILE_LAST,
+            MainFrame::OnRecentFile) EVT_MENU_RANGE(ID_RECENT_FOLDER_BASE,
+                                                    ID_RECENT_FOLDER_LAST,
+                                                    MainFrame::OnRecentFolder)
+            EVT_MENU(ID_CLEAR_RECENT_ITEMS, MainFrame::OnClearRecentItems) EVT_MENU(
+                wxID_UNDO,
+                MainFrame::
+                    OnEditUndo) EVT_MENU(wxID_REDO,
+                                         MainFrame::
+                                             OnEditRedo) EVT_MENU(wxID_CUT,
+                                                                  MainFrame::
+                                                                      OnEditCut)
+                EVT_MENU(wxID_COPY, MainFrame::OnEditCopy) EVT_MENU(
+                    wxID_PASTE,
+                    MainFrame::OnEditPaste) EVT_MENU(wxID_SELECTALL,
+                                                     MainFrame::OnEditSelectAll)
+                    EVT_MENU(ID_EDITOR_FONT, MainFrame::OnEditorFont) EVT_MENU(
+                        ID_PREVIEW_ZOOM_IN,
+                        MainFrame::
+                            OnPreviewZoomIn) EVT_MENU(ID_PREVIEW_ZOOM_OUT,
+                                                      MainFrame::
+                                                          OnPreviewZoomOut)
+                        EVT_MENU(ID_PREVIEW_ZOOM_RESET,
+                                 MainFrame::OnPreviewZoomReset)
+                            EVT_MENU_RANGE(ID_FORMAT_BOLD,
+                                           ID_FORMAT_CLEAR_FORMATTING,
+                                           MainFrame::OnFormatCommand)
+                                EVT_MENU_RANGE(ID_INSERT_LINK, ID_INSERT_TOC,
+                                               MainFrame::OnInsertCommand)
+                                    EVT_MENU(ID_DOCUMENT_SETTINGS,
+                                             MainFrame::OnDocumentSettings)
+                                        EVT_MENU(ID_DOCUMENT_VALIDATE,
+                                                 MainFrame::OnDocumentValidate)
+                                            EVT_MENU(ID_HELP_SHOW_HELP,
+                                                     MainFrame::OnHelpShowHelp)
+                                                EVT_MENU(
+                                                    ID_HELP_SAVE_PREVIEW_HTML,
                                                     MainFrame::
-                                                        OnClearRecentItems)
-                EVT_MENU(wxID_UNDO, MainFrame::OnEditUndo) EVT_MENU(
-                    wxID_REDO,
-                    MainFrame::OnEditRedo) EVT_MENU(wxID_CUT,
-                                                    MainFrame::OnEditCut)
-                    EVT_MENU(wxID_COPY, MainFrame::OnEditCopy) EVT_MENU(
-                        wxID_PASTE,
-                        MainFrame::OnEditPaste) EVT_MENU(wxID_SELECTALL,
-                                                         MainFrame::
-                                                             OnEditSelectAll)
-                        EVT_MENU_RANGE(ID_FORMAT_BOLD,
-                                       ID_FORMAT_CLEAR_FORMATTING,
-                                       MainFrame::OnFormatCommand)
-                            EVT_MENU_RANGE(ID_INSERT_LINK, ID_INSERT_TOC,
-                                           MainFrame::OnInsertCommand)
-                                EVT_MENU(ID_DOCUMENT_SETTINGS,
-                                         MainFrame::OnDocumentSettings)
-                                    EVT_MENU(ID_DOCUMENT_VALIDATE,
-                                             MainFrame::OnDocumentValidate)
-                                        EVT_MENU(ID_HELP_SHOW_HELP,
-                                                 MainFrame::OnHelpShowHelp)
-                                            EVT_MENU(ID_HELP_SAVE_PREVIEW_HTML,
-                                                     MainFrame::
-                                                         OnHelpSavePreviewHtml)
-                                                EVT_MENU(wxID_ABOUT,
-                                                         MainFrame::OnHelpAbout)
-                                                    EVT_CLOSE(
-                                                        MainFrame::OnClose)
-                                                        EVT_ACTIVATE(
-                                                            MainFrame::
-                                                                OnActivate)
-                                                            wxEND_EVENT_TABLE()
-
+                                                        OnHelpSavePreviewHtml)
+                                                    EVT_MENU(
+                                                        wxID_ABOUT,
+                                                        MainFrame::OnHelpAbout)
+                                                        EVT_CLOSE(
+                                                            MainFrame::OnClose)
+                                                            EVT_ACTIVATE(
                                                                 MainFrame::
-                                                                    MainFrame()
+                                                                    OnActivate)
+                                                                wxEND_EVENT_TABLE()
+
+                                                                    MainFrame::
+                                                                        MainFrame()
     : wxFrame(nullptr, wxID_ANY, "Glance Markdown Editor", wxDefaultPosition,
               wxSize(1000, 700)),
       m_fileTreePanel(nullptr),
@@ -277,9 +332,13 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
 
   CreateMenuBar();
   CreateLayout();
-  CreateStatusBar(2);
+  SetStatusBar(new GlanceStatusBar(this));
+  GetStatusBar()->SetFieldsCount(3);
+  int statusWidths[] = {-1, 400, 150};
+  SetStatusWidths(3, statusWidths);
   SetStatusText("Ready", 0);
   SetStatusText("Glance Markdown Editor", 1);
+  SetZoomStatusText("Zoomlevel: 100%");
   ApplyWindowSettings();
   RefreshRecentMenus();
   UpdateDocumentCommandState();
@@ -312,6 +371,13 @@ void MainFrame::CreateMenuBar() {
                    "Close the current editor tab");
   fileMenu->Append(wxID_PRINT, "&Print...\tCtrl+P",
                    "Print the current document");
+  fileMenu->AppendSeparator();
+  wxMenu* settingsMenu = new wxMenu();
+  settingsMenu->Append(ID_EDITOR_FONT, "Editor &Font...",
+                       "Choose the editor font and size");
+  settingsMenu->Append(ID_DOCUMENT_SETTINGS, "Markdown &Flavor...",
+                       "Choose the Markdown flavor for the current document");
+  fileMenu->AppendSubMenu(settingsMenu, "Se&ttings");
   fileMenu->AppendSeparator();
   fileMenu->Append(wxID_EXIT, "E&xit\tCtrl+Q", "Exit the application");
 
@@ -385,8 +451,6 @@ void MainFrame::CreateMenuBar() {
 
   // Document menu
   wxMenu* documentMenu = new wxMenu();
-  documentMenu->Append(ID_DOCUMENT_SETTINGS, "&Settings...",
-                       "Choose settings for the current document");
   documentMenu->Append(ID_DOCUMENT_VALIDATE, "&Validate Markdown",
                        "Validate the current document against its Markdown "
                        "flavor");
@@ -404,10 +468,31 @@ void MainFrame::CreateMenuBar() {
   menuBar->Append(editMenu, "&Edit");
   menuBar->Append(formatMenu, "F&ormat");
   menuBar->Append(insertMenu, "&Insert");
+  wxMenu* viewMenu = new wxMenu();
+  viewMenu->Append(ID_PREVIEW_ZOOM_IN, "Zoom &In\tCtrl++",
+                   "Increase the preview zoom");
+  viewMenu->Append(ID_PREVIEW_ZOOM_OUT, "Zoom &Out\tCtrl+-",
+                   "Decrease the preview zoom");
+  viewMenu->Append(ID_PREVIEW_ZOOM_RESET, "&Reset Zoom\tCtrl+0",
+                   "Reset the preview zoom");
+  menuBar->Append(viewMenu, "&View");
   menuBar->Append(documentMenu, "&Document");
   menuBar->Append(helpMenu, "&Help");
 
   SetMenuBar(menuBar);
+
+  wxAcceleratorEntry accelerators[] = {
+      wxAcceleratorEntry(wxACCEL_CTRL, '+', ID_PREVIEW_ZOOM_IN),
+      wxAcceleratorEntry(wxACCEL_CTRL, '=', ID_PREVIEW_ZOOM_IN),
+      wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_ADD, ID_PREVIEW_ZOOM_IN),
+      wxAcceleratorEntry(wxACCEL_CTRL, '-', ID_PREVIEW_ZOOM_OUT),
+      wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_SUBTRACT,
+                         ID_PREVIEW_ZOOM_OUT),
+      wxAcceleratorEntry(wxACCEL_CTRL, '0', ID_PREVIEW_ZOOM_RESET),
+      wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD0, ID_PREVIEW_ZOOM_RESET),
+  };
+  SetAcceleratorTable(wxAcceleratorTable(
+      static_cast<int>(std::size(accelerators)), accelerators));
 }
 
 void MainFrame::CreateLayout() {
@@ -428,6 +513,7 @@ void MainFrame::CreateLayout() {
   m_editorPreviewSplitter->SetSashGravity(0.625);
 
   m_editorNotebook = new EditorNotebook(m_editorPreviewSplitter);
+  m_editorNotebook->SetEditorFont(m_settingsManager.LoadEditorFont());
   m_editorNotebook->Bind(wxEVT_GLANCE_EDITOR_STATUS_CHANGED,
                          &MainFrame::OnEditorStatusChanged, this);
   m_editorNotebook->Bind(wxEVT_GLANCE_ACTIVE_DOCUMENT_CHANGED,
@@ -436,6 +522,8 @@ void MainFrame::CreateLayout() {
                          &MainFrame::OnDocumentChanged, this);
 
   m_previewPanel = new PreviewPanel(m_editorPreviewSplitter);
+  m_previewPanel->Bind(wxEVT_GLANCE_PREVIEW_ZOOM_CHANGED,
+                       &MainFrame::OnPreviewZoomChanged, this);
 
   m_editorPreviewSplitter->SplitVertically(m_editorNotebook, m_previewPanel,
                                            500);
@@ -618,6 +706,49 @@ void MainFrame::OnEditPaste(wxCommandEvent& event) {
 
 void MainFrame::OnEditSelectAll(wxCommandEvent& event) {
   m_editorNotebook->SelectAllText();
+}
+
+void MainFrame::OnEditorFont(wxCommandEvent& event) {
+  wxFontData fontData;
+  fontData.EnableEffects(false);
+  fontData.SetInitialFont(m_editorNotebook->GetEditorFont());
+
+  wxFontDialog dialog(this, fontData);
+  if (dialog.ShowModal() != wxID_OK) {
+    return;
+  }
+
+  const wxFont font = dialog.GetFontData().GetChosenFont();
+  if (!font.IsOk()) {
+    return;
+  }
+
+  m_editorNotebook->SetEditorFont(font);
+  m_settingsManager.SaveEditorFont(font);
+  SetStatusText(wxString::Format("Editor font set to %s %d", font.GetFaceName(),
+                                 font.GetPointSize()),
+                0);
+}
+
+void MainFrame::OnPreviewZoomIn(wxCommandEvent& event) {
+  if (m_previewPanel) {
+    m_previewPanel->ZoomIn();
+    SetStatusText("Preview zoom increased", 0);
+  }
+}
+
+void MainFrame::OnPreviewZoomOut(wxCommandEvent& event) {
+  if (m_previewPanel) {
+    m_previewPanel->ZoomOut();
+    SetStatusText("Preview zoom decreased", 0);
+  }
+}
+
+void MainFrame::OnPreviewZoomReset(wxCommandEvent& event) {
+  if (m_previewPanel) {
+    m_previewPanel->ResetZoom();
+    SetStatusText("Preview zoom reset", 0);
+  }
 }
 
 void MainFrame::OnFormatCommand(wxCommandEvent& event) {
@@ -885,6 +1016,10 @@ void MainFrame::OnEditorStatusChanged(wxCommandEvent& event) {
   SetStatusText(event.GetString(), 1);
 }
 
+void MainFrame::OnPreviewZoomChanged(wxCommandEvent& event) {
+  SetZoomStatusText(wxString::Format("Zoomlevel: %d%%", event.GetInt()));
+}
+
 void MainFrame::OnActiveDocumentChanged(wxCommandEvent& event) {
   if (!event.GetString().empty()) {
     SetStatusText("Active file: " + event.GetString(), 0);
@@ -1095,7 +1230,8 @@ void MainFrame::UpdateDocumentCommandState() {
   menuBar->EnableTop(1, hasDocument);  // Edit
   menuBar->EnableTop(2, hasDocument);  // Format
   menuBar->EnableTop(3, hasDocument);  // Insert
-  menuBar->EnableTop(4, hasDocument);  // Document
+  menuBar->EnableTop(4, hasDocument);  // View
+  menuBar->EnableTop(5, hasDocument);  // Document
 
   const int documentCommandIds[] = {
       wxID_SAVE,
@@ -1142,6 +1278,9 @@ void MainFrame::UpdateDocumentCommandState() {
       ID_INSERT_DATE_TIME,
       ID_DOCUMENT_SETTINGS,
       ID_DOCUMENT_VALIDATE,
+      ID_PREVIEW_ZOOM_IN,
+      ID_PREVIEW_ZOOM_OUT,
+      ID_PREVIEW_ZOOM_RESET,
       ID_HELP_SAVE_PREVIEW_HTML,
   };
 
@@ -1153,6 +1292,16 @@ void MainFrame::UpdateDocumentCommandState() {
     menuBar->Enable(command.menuId,
                     hasDocument && IsMarkdownCommandAllowed(command.command));
   }
+}
+
+void MainFrame::SetZoomStatusText(const wxString& text) {
+  if (GlanceStatusBar* statusBar =
+          dynamic_cast<GlanceStatusBar*>(GetStatusBar())) {
+    statusBar->SetZoomText(text);
+    return;
+  }
+
+  SetStatusText(text, 2);
 }
 
 void MainFrame::ApplyWindowSettings() {

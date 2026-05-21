@@ -1,6 +1,7 @@
 #ifndef GLANCE_CTRL_H
 #define GLANCE_CTRL_H
 
+#include <wx/font.h>
 #include <wx/stc/stc.h>
 
 class Document;
@@ -42,11 +43,12 @@ enum class MarkdownCommand {
 
 class GlanceCtrl : public wxStyledTextCtrl {
  public:
-  GlanceCtrl(wxWindow* parent, Document* document);
+  GlanceCtrl(wxWindow* parent, Document* document, const wxFont& editorFont);
 
   Document* GetDocument() const;
   void LoadFromDocument();
   void SaveToDocument();
+  void SetEditorFont(const wxFont& font);
   wxString GetEditorStatus() const;
   void ExecuteMarkdownCommand(MarkdownCommand command,
                               const wxString& argument = wxString(),
@@ -62,6 +64,7 @@ class GlanceCtrl : public wxStyledTextCtrl {
   void ClearFormatting();
 
   Document* m_document;
+  wxFont m_editorFont;
 };
 
 #endif  // GLANCE_CTRL_H

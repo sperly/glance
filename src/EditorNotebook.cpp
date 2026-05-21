@@ -1,5 +1,6 @@
 #include "EditorNotebook.h"
 
+#include <wx/font.h>
 #include <wx/msgdlg.h>
 
 #include "GlanceCtrl.h"
@@ -11,7 +12,8 @@ wxDEFINE_EVENT(wxEVT_GLANCE_DOCUMENT_CHANGED, wxCommandEvent);
 EditorNotebook::EditorNotebook(wxWindow* parent)
     : wxAuiNotebook(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                     wxAUI_NB_DEFAULT_STYLE | wxAUI_NB_CLOSE_ON_ACTIVE_TAB),
-      m_closingProgrammatically(false) {
+      m_closingProgrammatically(false),
+      m_editorFont(wxFontInfo(10).Family(wxFONTFAMILY_TELETYPE)) {
   Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, &EditorNotebook::OnPageChanged, this);
   Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSE, &EditorNotebook::OnPageClose, this);
 }
@@ -30,7 +32,7 @@ Document* EditorNotebook::OpenFile(const wxString& filePath,
     return document;
   }
 
-  GlanceCtrl* editor = new GlanceCtrl(this, document);
+  GlanceCtrl* editor = new GlanceCtrl(this, document, m_editorFont);
   editor->Bind(wxEVT_STC_CHANGE, &EditorNotebook::OnEditorChanged, this);
   editor->Bind(wxEVT_STC_UPDATEUI, &EditorNotebook::OnEditorUpdateUI, this);
   AddPage(editor, document->GetFileName(), true);
@@ -185,6 +187,21 @@ bool EditorNotebook::CheckForExternalChanges(wxWindow* parent) {
 
   return reloadedAnyDocument;
 }
+
+void EditorNotebook::SetEditorFont(const wxFont& font) {
+  if (!font.IsOk()) {
+    return;
+  }
+
+  m_editorFont = font;
+  for (size_t i = 0; i < GetPageCount(); ++i) {
+    if (GlanceCtrl* editor = GetEditorAt(i)) {
+      editor->SetEditorFont(m_editorFont);
+    }
+  }
+}
+
+wxFont EditorNotebook::GetEditorFont() const { return m_editorFont; }
 
 GlanceCtrl* EditorNotebook::GetCurrentEditor() const {
   const int selection = GetSelection();
