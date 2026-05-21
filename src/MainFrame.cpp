@@ -22,6 +22,7 @@
 #include "MarkdownFlavor.h"
 #include "MarkdownValidator.h"
 #include "PreviewPanel.h"
+#include "SearchReplaceDialog.h"
 
 namespace {
 enum {
@@ -70,6 +71,7 @@ enum {
   ID_INSERT_TOC,
   ID_DOCUMENT_SETTINGS,
   ID_DOCUMENT_VALIDATE,
+  ID_EDIT_SEARCH_REPLACE,
   ID_HELP_SHOW_HELP,
   ID_HELP_SAVE_PREVIEW_HTML,
   ID_RECENT_FILE_BASE,
@@ -200,35 +202,40 @@ const std::vector<MarkdownMenuCommand>& GetMarkdownMenuCommands() {
 }  // namespace
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
-    ID_NEW_FILE, MainFrame::OnFileNewFile) EVT_MENU(ID_OPEN_FOLDER,
-                                                    MainFrame::OnFileOpenFolder)
-    EVT_MENU(wxID_OPEN, MainFrame::OnFileOpenFile) EVT_MENU(
-        wxID_SAVE,
+    ID_NEW_FILE,
+    MainFrame::
+        OnFileNewFile) EVT_MENU(ID_OPEN_FOLDER,
+                                MainFrame::
+                                    OnFileOpenFolder) EVT_MENU(wxID_OPEN,
+                                                               MainFrame::
+                                                                   OnFileOpenFile)
+    EVT_MENU(wxID_SAVE, MainFrame::OnFileSave) EVT_MENU(
+        ID_SAVE_ALL,
         MainFrame::
-            OnFileSave) EVT_MENU(ID_SAVE_ALL,
-                                 MainFrame::
-                                     OnFileSaveAll) EVT_MENU(ID_CLOSE_TAB,
-                                                             MainFrame::
-                                                                 OnFileCloseTab)
-        EVT_MENU(wxID_PRINT, MainFrame::OnFilePrint) EVT_MENU(
-            wxID_EXIT,
-            MainFrame::OnFileExit) EVT_MENU_RANGE(ID_RECENT_FILE_BASE,
-                                                  ID_RECENT_FILE_LAST,
-                                                  MainFrame::OnRecentFile)
-            EVT_MENU_RANGE(
-                ID_RECENT_FOLDER_BASE, ID_RECENT_FOLDER_LAST,
-                MainFrame::OnRecentFolder) EVT_MENU(ID_CLEAR_RECENT_ITEMS,
-                                                    MainFrame::
-                                                        OnClearRecentItems)
-                EVT_MENU(wxID_UNDO, MainFrame::OnEditUndo) EVT_MENU(
-                    wxID_REDO,
-                    MainFrame::OnEditRedo) EVT_MENU(wxID_CUT,
-                                                    MainFrame::OnEditCut)
-                    EVT_MENU(wxID_COPY, MainFrame::OnEditCopy) EVT_MENU(
-                        wxID_PASTE,
-                        MainFrame::OnEditPaste) EVT_MENU(wxID_SELECTALL,
-                                                         MainFrame::
-                                                             OnEditSelectAll)
+            OnFileSaveAll) EVT_MENU(ID_CLOSE_TAB,
+                                    MainFrame::
+                                        OnFileCloseTab) EVT_MENU(wxID_PRINT,
+                                                                 MainFrame::
+                                                                     OnFilePrint)
+        EVT_MENU(wxID_EXIT, MainFrame::OnFileExit) EVT_MENU_RANGE(
+            ID_RECENT_FILE_BASE, ID_RECENT_FILE_LAST,
+            MainFrame::OnRecentFile) EVT_MENU_RANGE(ID_RECENT_FOLDER_BASE,
+                                                    ID_RECENT_FOLDER_LAST,
+                                                    MainFrame::OnRecentFolder)
+            EVT_MENU(
+                ID_CLEAR_RECENT_ITEMS,
+                MainFrame::OnClearRecentItems) EVT_MENU(wxID_UNDO,
+                                                        MainFrame::OnEditUndo)
+                EVT_MENU(wxID_REDO, MainFrame::OnEditRedo) EVT_MENU(
+                    wxID_CUT,
+                    MainFrame::OnEditCut) EVT_MENU(wxID_COPY,
+                                                   MainFrame::OnEditCopy)
+                    EVT_MENU(wxID_PASTE, MainFrame::OnEditPaste) EVT_MENU(
+                        wxID_SELECTALL,
+                        MainFrame::
+                            OnEditSelectAll) EVT_MENU(ID_EDIT_SEARCH_REPLACE,
+                                                      MainFrame::
+                                                          OnEditSearchReplace)
                         EVT_MENU_RANGE(ID_FORMAT_BOLD,
                                        ID_FORMAT_CLEAR_FORMATTING,
                                        MainFrame::OnFormatCommand)
@@ -325,6 +332,9 @@ void MainFrame::CreateMenuBar() {
   editMenu->Append(wxID_PASTE, "&Paste\tCtrl+V", "Paste text");
   editMenu->AppendSeparator();
   editMenu->Append(wxID_SELECTALL, "Select &All\tCtrl+A", "Select all text");
+  editMenu->AppendSeparator();
+  editMenu->Append(ID_EDIT_SEARCH_REPLACE, "Search and &Replace...\tCtrl+H",
+                   "Find and replace text in the current document");
 
   // Format menu
   wxMenu* formatMenu = new wxMenu();
@@ -618,6 +628,17 @@ void MainFrame::OnEditPaste(wxCommandEvent& event) {
 
 void MainFrame::OnEditSelectAll(wxCommandEvent& event) {
   m_editorNotebook->SelectAllText();
+}
+
+void MainFrame::OnEditSearchReplace(wxCommandEvent& event) {
+  if (!m_editorNotebook->GetCurrentDocument()) {
+    wxMessageBox("No document is open.", "Search and Replace",
+                 wxOK | wxICON_INFORMATION, this);
+    return;
+  }
+
+  SearchReplaceDialog* dialog = new SearchReplaceDialog(this, m_editorNotebook);
+  dialog->Show();
 }
 
 void MainFrame::OnFormatCommand(wxCommandEvent& event) {
@@ -1108,6 +1129,7 @@ void MainFrame::UpdateDocumentCommandState() {
       wxID_COPY,
       wxID_PASTE,
       wxID_SELECTALL,
+      ID_EDIT_SEARCH_REPLACE,
       ID_FORMAT_BOLD,
       ID_FORMAT_ITALIC,
       ID_FORMAT_BOLD_ITALIC,

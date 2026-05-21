@@ -45,6 +45,8 @@ set(GLANCE_APP_SOURCES
     src/PreviewPanel.h
     src/ResourcePaths.cpp
     src/ResourcePaths.h
+    src/SearchReplaceDialog.cpp
+    src/SearchReplaceDialog.h
     src/SettingsManager.cpp
     src/SettingsManager.h
 )

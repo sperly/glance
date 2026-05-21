@@ -234,6 +234,28 @@ void EditorNotebook::SelectAllText() {
   if (GlanceCtrl* editor = GetCurrentEditor()) editor->SelectAll();
 }
 
+bool EditorNotebook::FindNextText(const wxString& searchText, bool matchCase,
+                                  bool wrap) {
+  GlanceCtrl* editor = GetCurrentEditor();
+  return editor && editor->FindNextText(searchText, matchCase, wrap);
+}
+
+bool EditorNotebook::ReplaceNextText(const wxString& searchText,
+                                     const wxString& replacementText,
+                                     bool matchCase, bool wrap) {
+  GlanceCtrl* editor = GetCurrentEditor();
+  return editor &&
+         editor->ReplaceNextText(searchText, replacementText, matchCase, wrap);
+}
+
+int EditorNotebook::ReplaceAllText(const wxString& searchText,
+                                   const wxString& replacementText,
+                                   bool matchCase) {
+  GlanceCtrl* editor = GetCurrentEditor();
+  return editor ? editor->ReplaceAllText(searchText, replacementText, matchCase)
+                : 0;
+}
+
 bool EditorNotebook::ExecuteMarkdownCommand(MarkdownCommand command,
                                             const wxString& argument,
                                             const wxString& secondaryArgument) {

@@ -42,6 +42,7 @@ class MainFrame : public wxFrame {
   void OnEditCopy(wxCommandEvent& event);
   void OnEditPaste(wxCommandEvent& event);
   void OnEditSelectAll(wxCommandEvent& event);
+  void OnEditSearchReplace(wxCommandEvent& event);
   void OnFormatCommand(wxCommandEvent& event);
   void OnInsertCommand(wxCommandEvent& event);
   void OnDocumentSettings(wxCommandEvent& event);
