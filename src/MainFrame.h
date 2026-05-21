@@ -42,6 +42,10 @@ class MainFrame : public wxFrame {
   void OnEditCopy(wxCommandEvent& event);
   void OnEditPaste(wxCommandEvent& event);
   void OnEditSelectAll(wxCommandEvent& event);
+  void OnEditorFont(wxCommandEvent& event);
+  void OnPreviewZoomIn(wxCommandEvent& event);
+  void OnPreviewZoomOut(wxCommandEvent& event);
+  void OnPreviewZoomReset(wxCommandEvent& event);
   void OnFormatCommand(wxCommandEvent& event);
   void OnInsertCommand(wxCommandEvent& event);
   void OnDocumentSettings(wxCommandEvent& event);
@@ -52,6 +56,7 @@ class MainFrame : public wxFrame {
   void OnMarkdownFileSelected(wxCommandEvent& event);
   void OnMarkdownFileActivated(wxCommandEvent& event);
   void OnEditorStatusChanged(wxCommandEvent& event);
+  void OnPreviewZoomChanged(wxCommandEvent& event);
   void OnActiveDocumentChanged(wxCommandEvent& event);
   void OnDocumentChanged(wxCommandEvent& event);
   void OnClose(wxCloseEvent& event);
@@ -67,6 +72,7 @@ class MainFrame : public wxFrame {
   wxString GetDefaultNewFileDirectory() const;
   wxString MakeMarkdownImagePath(const wxString& imagePath) const;
   void UpdateDocumentCommandState();
+  void SetZoomStatusText(const wxString& text);
   void ApplyWindowSettings();
   void SaveWindowSettings();
   void RefreshRecentMenus();

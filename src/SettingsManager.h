@@ -2,6 +2,7 @@
 #define SETTINGS_MANAGER_H
 
 #include <wx/arrstr.h>
+#include <wx/font.h>
 #include <wx/gdicmn.h>
 #include <wx/string.h>
 
@@ -20,6 +21,8 @@ class SettingsManager {
  public:
   WindowSettings LoadWindowSettings() const;
   void SaveWindowSettings(const WindowSettings& settings) const;
+  wxFont LoadEditorFont() const;
+  void SaveEditorFont(const wxFont& font) const;
 
   wxArrayString LoadRecentFiles() const;
   wxArrayString LoadRecentFolders() const;

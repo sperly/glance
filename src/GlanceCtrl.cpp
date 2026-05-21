@@ -8,8 +8,17 @@
 
 #include "Document.h"
 
-GlanceCtrl::GlanceCtrl(wxWindow* parent, Document* document)
-    : wxStyledTextCtrl(parent, wxID_ANY), m_document(document) {
+namespace {
+wxFont GetFallbackEditorFont() {
+  return wxFont(wxFontInfo(10).Family(wxFONTFAMILY_TELETYPE));
+}
+}  // namespace
+
+GlanceCtrl::GlanceCtrl(wxWindow* parent, Document* document,
+                       const wxFont& editorFont)
+    : wxStyledTextCtrl(parent, wxID_ANY),
+      m_document(document),
+      m_editorFont(editorFont.IsOk() ? editorFont : GetFallbackEditorFont()) {
   ConfigureEditor();
   LoadFromDocument();
 }
@@ -27,6 +36,11 @@ void GlanceCtrl::SaveToDocument() {
     m_document->SetContent(GetText());
     m_document->SetModified(GetModify());
   }
+}
+
+void GlanceCtrl::SetEditorFont(const wxFont& font) {
+  m_editorFont = font.IsOk() ? font : GetFallbackEditorFont();
+  ConfigureEditor();
 }
 
 wxString GlanceCtrl::GetEditorStatus() const {
@@ -166,9 +180,9 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
 
 void GlanceCtrl::ConfigureEditor() {
   SetLexer(wxSTC_LEX_MARKDOWN);
+  StyleSetFont(wxSTC_STYLE_DEFAULT, m_editorFont);
+  StyleSetSize(wxSTC_STYLE_DEFAULT, m_editorFont.GetPointSize());
   StyleClearAll();
-  StyleSetFont(wxSTC_STYLE_DEFAULT,
-               wxFontInfo(10).Family(wxFONTFAMILY_TELETYPE));
   StyleSetForeground(wxSTC_MARKDOWN_HEADER1, wxColour(25, 80, 150));
   StyleSetForeground(wxSTC_MARKDOWN_HEADER2, wxColour(25, 80, 150));
   StyleSetForeground(wxSTC_MARKDOWN_HEADER3, wxColour(25, 80, 150));
