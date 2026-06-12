@@ -260,28 +260,25 @@ Then rerun CMake and rebuild the application.
 
 ## Version History
 
-### v1.0.0 (2025-01-15)
+### v1.2.0 (2026-05-19)
 
-- Initial stable release
-- Full Markdown editing with syntax highlighting
-- GitHub Markdown and Vanilla Markdown flavor support
+- Added support for table formatting (left aligned, centered, right aligned columns)
+- Added syntax highlighting support
+- Added syntax highlighting of code blocks (highlight.js based)
+
+### v1.1.0 (2026-05-15)
+
+- Added Superscript and Subscript support
+- Refactored flavor handling to simplify adding new Markdown flavors
+- Added help documentation for adding new flavors
+- Added function to enable/disable formatting and inserts based on current Markdown flavor
+
+### v1.0.0 (2026-05-15)
+
+- First release
+- Full Markdown editing with preview
+- Support for GitHub Markdown and Vanilla Markdown flavors
 - Tabbed editor with multi-document support
-- Real-time preview rendering
-- File tree navigation for folders
+- File tree navigation
 - Search and replace functionality
 - Comprehensive formatting and insert menus
-- Cross-platform support (Windows, macOS, Linux)
-
-### v0.9.0 (2024-12-20)
-
-- Beta release with core functionality
-- Basic Markdown editing and preview
-- Document settings and flavor selection
-- Keyboard shortcuts for common actions
-- Help and About dialogs
-
-### v0.1.0 (2024-11-01)
-
-- Initial project setup
-- Project structure and build configuration
-- Basic wxWidgets application framework
