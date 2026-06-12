@@ -19,5 +19,6 @@ function(glance_add_core_tests)
 
     target_link_libraries(glance_core_tests ${wxWidgets_LIBRARIES})
     target_include_directories(glance_core_tests PRIVATE src)
+    glance_configure_plantuml(glance_core_tests)
     add_test(NAME glance_core_tests COMMAND glance_core_tests)
 endfunction()

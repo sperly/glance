@@ -324,6 +324,8 @@ th, td {
 }
 th { background: #f1f5f9; text-align: left; }
 img { max-width: 100%; height: auto; }
+.plantuml-diagram { overflow: auto; margin: 1em 0; text-align: center; }
+.plantuml-diagram svg { max-width: 100%; height: auto; }
 hr { border: 0; border-top: 1px solid #d8dee6; margin: 1.5em 0; }
 .glance-strike { text-decoration: line-through; }
 mark { background: #fff3a3; color: inherit; padding: 0.05em 0.2em; border-radius: 3px; }

@@ -1,6 +1,9 @@
 #include "MarkdownRenderer.h"
 
+#include <wx/file.h>
+#include <wx/filefn.h>
 #include <wx/filename.h>
+#include <wx/utils.h>
 
 #include <algorithm>
 #include <cctype>
@@ -137,12 +140,27 @@ bool MatchTag(const MarkdownFlavorDefinition& definition, MarkdownTag tag,
   return std::regex_match(value, pattern);
 }
 
-std::string BuildFencedCodeBlockOpening(const std::smatch& match) {
-  if (match.size() < 2 || match[1].str().empty()) {
+std::string BuildFencedCodeBlockOpening(const std::string& language) {
+  if (language.empty()) {
     return "<pre><code>";
   }
 
-  return "<pre><code class=\"language-" + EscapeHtml(match[1].str()) + "\">";
+  return "<pre><code class=\"language-" + EscapeHtml(language) + "\">";
+}
+
+bool IsPlantUmlLanguage(const std::string& language) {
+  std::string lower = language;
+  std::transform(lower.begin(), lower.end(), lower.begin(),
+                 [](unsigned char ch) { return std::tolower(ch); });
+  return lower == "plantuml" || lower == "puml";
+}
+
+wxString DefaultPlantUmlExecutable() {
+#ifdef GLANCE_PLANTUML_EXECUTABLE
+  return GLANCE_PLANTUML_EXECUTABLE;
+#else
+  return wxString();
+#endif
 }
 
 std::vector<std::string> SplitLines(const std::string& text) {
@@ -387,6 +405,12 @@ std::string RestoreEscapedMarkdownCharacters(
 }
 }  // namespace
 
+MarkdownRenderer::MarkdownRenderer()
+    : m_plantUmlExecutable(DefaultPlantUmlExecutable()) {}
+
+MarkdownRenderer::MarkdownRenderer(const wxString& plantUmlExecutable)
+    : m_plantUmlExecutable(plantUmlExecutable) {}
+
 wxString MarkdownRenderer::RenderDocument(const wxString& markdown,
                                           const wxString& sourceFilePath,
                                           MarkdownFlavor flavor) const {
@@ -407,6 +431,8 @@ wxString MarkdownRenderer::RenderDocument(
   std::string html;
   std::string paragraph;
   bool inCodeBlock = false;
+  std::string codeBlockLanguage;
+  std::string codeBlockContent;
   bool inUnorderedList = false;
   bool inOrderedList = false;
   const MarkdownTagDefinition* fencedCodeBlockRule =
@@ -450,14 +476,25 @@ wxString MarkdownRenderer::RenderDocument(
         MatchTag(definition, MarkdownTag::FencedCodeBlock, trimmed, &match)) {
       closeParagraph();
       closeLists();
-      html += inCodeBlock ? fencedCodeBlockRule->closingHtml
-                          : BuildFencedCodeBlockOpening(match);
+      if (inCodeBlock) {
+        if (IsPlantUmlLanguage(codeBlockLanguage)) {
+          html += ToStdString(RenderPlantUml(ToWxString(codeBlockContent)));
+        } else {
+          html += BuildFencedCodeBlockOpening(codeBlockLanguage) +
+                  EscapeHtml(codeBlockContent) +
+                  fencedCodeBlockRule->closingHtml;
+        }
+        codeBlockLanguage.clear();
+        codeBlockContent.clear();
+      } else {
+        codeBlockLanguage = match.size() > 1 ? match[1].str() : std::string();
+      }
       inCodeBlock = !inCodeBlock;
       continue;
     }
 
     if (inCodeBlock) {
-      html += EscapeHtml(line) + "\n";
+      codeBlockContent += line + "\n";
       continue;
     }
 
@@ -597,10 +634,79 @@ wxString MarkdownRenderer::RenderDocument(
   closeParagraph();
   closeLists();
   if (inCodeBlock && fencedCodeBlockRule) {
-    html += fencedCodeBlockRule->closingHtml;
+    if (IsPlantUmlLanguage(codeBlockLanguage)) {
+      html += ToStdString(RenderPlantUml(ToWxString(codeBlockContent)));
+    } else {
+      html += BuildFencedCodeBlockOpening(codeBlockLanguage) +
+              EscapeHtml(codeBlockContent) + fencedCodeBlockRule->closingHtml;
+    }
   }
 
   return ToWxString(html);
+}
+
+wxString MarkdownRenderer::RenderPlantUml(const wxString& source) const {
+  const wxString fallback =
+      "<pre><code>No PlantUML Support or error in PlantUML code</code></pre>\n";
+  if (m_plantUmlExecutable.empty() ||
+      !wxFileName::FileExists(m_plantUmlExecutable)) {
+    return fallback;
+  }
+
+  const wxString sourcePath =
+      wxFileName::CreateTempFileName("glance-plantuml-");
+  if (sourcePath.empty()) {
+    return fallback;
+  }
+
+  wxFile sourceFile(sourcePath, wxFile::write);
+  if (!sourceFile.IsOpened() || !sourceFile.Write(source)) {
+    wxRemoveFile(sourcePath);
+    return fallback;
+  }
+  sourceFile.Close();
+
+  const wxString svgPath = sourcePath + ".svg";
+  wxExecuteEnv environment;
+  wxGetEnvMap(&environment.env);
+  wxString javaOptions = environment.env["JAVA_TOOL_OPTIONS"];
+  if (!javaOptions.empty()) {
+    javaOptions += " ";
+  }
+  environment.env["JAVA_TOOL_OPTIONS"] =
+      javaOptions + "-Djava.awt.headless=true";
+
+  wxString executable = m_plantUmlExecutable;
+  executable.Replace("\"", "\\\"");
+  wxString inputPath = sourcePath;
+  inputPath.Replace("\"", "\\\"");
+  const wxString command =
+      "\"" + executable + "\" -tsvg -charset UTF-8 \"" + inputPath + "\"";
+  const long exitCode =
+      wxExecute(command, wxEXEC_SYNC | wxEXEC_NOEVENTS, nullptr, &environment);
+
+  wxString svg;
+  if (exitCode == 0 && wxFileExists(svgPath)) {
+    wxFile svgFile(svgPath);
+    if (svgFile.IsOpened()) {
+      svgFile.ReadAll(&svg);
+    }
+  }
+
+  wxRemoveFile(sourcePath);
+  if (wxFileExists(svgPath)) {
+    wxRemoveFile(svgPath);
+  }
+
+  const int svgStart = svg.Find("<svg");
+  const int svgEnd = svg.Find("</svg>");
+  if (svgStart == wxNOT_FOUND || svgEnd == wxNOT_FOUND || svgEnd < svgStart) {
+    return fallback;
+  }
+
+  const wxString diagram =
+      svg.Mid(svgStart, svgEnd - svgStart + wxString("</svg>").length());
+  return "<div class=\"plantuml-diagram\">" + diagram + "</div>\n";
 }
 
 wxString MarkdownRenderer::RenderInline(
