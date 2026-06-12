@@ -260,6 +260,12 @@ Then rerun CMake and rebuild the application.
 
 ## Version History
 
+### v1.4.0 (2026-06-12)
+
+- Added preview rendering for `plantuml` and `puml` fenced code blocks when PlantUML is available
+- Added an Insert menu command for creating PlantUML diagram blocks
+- Renamed the executable and package target to `glance-mde` to avoid a package name conflict
+
 ### v1.3.0 (2026-05-21)
 
 - Added Search and Replace functionality
