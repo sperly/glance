@@ -235,6 +235,9 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
       InsertSnippet(header + "\n" + separator + "\n" + row + "\n");
       break;
     }
+    case MarkdownCommand::PlantUmlDiagram:
+      InsertSnippet("\n```plantuml\n\n```\n");
+      break;
     case MarkdownCommand::Date:
       InsertSnippet(wxDateTime::Now().FormatISODate());
       break;

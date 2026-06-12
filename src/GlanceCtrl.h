@@ -33,6 +33,7 @@ enum class MarkdownCommand {
   Link,
   Image,
   Table,
+  PlantUmlDiagram,
   Date,
   Time,
   DateTime,

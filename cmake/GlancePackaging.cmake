@@ -24,6 +24,7 @@ function(glance_configure_packaging target_name)
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${GLANCE_PACKAGE_MAINTAINER}")
     set(CPACK_DEBIAN_PACKAGE_SECTION "editors")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "plantuml")
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 
     include(CPack)

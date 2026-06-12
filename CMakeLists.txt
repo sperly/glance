@@ -11,6 +11,7 @@ include(GlanceTests)
 include(GlanceWebView)
 include(GlancePackaging)
 include(GlanceFormat)
+include(GlancePlantUml)
 
 set(GLANCE_APP_SOURCES
     src/main.cpp
@@ -71,6 +72,7 @@ add_executable(${PROJECT_NAME} WIN32
 # Link wxWidgets libraries
 target_link_libraries(${PROJECT_NAME} ${wxWidgets_LIBRARIES})
 glance_configure_webview(${PROJECT_NAME})
+glance_configure_plantuml(${PROJECT_NAME})
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE

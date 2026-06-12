@@ -139,6 +139,7 @@ In GitHub Markdown mode, the preview supports common Markdown structures:
 - Subscript and superscript
 - Lists and task lists
 - Fenced code blocks and inline code
+- PlantUML diagrams when the `plantuml` executable is available
 - Blockquotes
 - Tables
 - Links and images
@@ -186,6 +187,7 @@ Use the `Insert` menu to add Markdown snippets:
 - Link
 - Image
 - Table
+- PlantUML Diagram
 - Bullet List
 - Numbered List
 - Task List
@@ -195,6 +197,20 @@ Use the `Insert` menu to add Markdown snippets:
 - Date and Time
 
 The link command prompts for link text and URL. The image command prompts for an image file and alt text. Glance inserts a relative path when the image is near the current Markdown file. The table command asks how many columns to create.
+
+PlantUML diagrams use fenced blocks such as:
+
+````text
+```plantuml
+@startuml
+Alice -> Bob: Hello
+@enduml
+```
+````
+
+CMake detects the `plantuml` executable at configure time. When it is not
+available, or when PlantUML cannot render the diagram source, the preview
+displays `No PlantUML Support or error in PlantUML code` in a code box.
 
 If text is selected, inserted snippets are placed before the selected text instead of replacing it.
 

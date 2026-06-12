@@ -386,6 +386,32 @@ void TestMarkdownRendererHandlesGithubLanguageFences() {
   ExpectNotContains(html, "<p>```</p>", "closing code fence is not rendered");
 }
 
+void TestMarkdownRendererShowsPlantUmlFallbackWithoutRenderer() {
+  MarkdownRenderer renderer("/path/that/does/not/contain/plantuml");
+  const wxString html = renderer.RenderDocument(
+      "```plantuml\n@startuml\nAlice -> Bob\n@enduml\n```\n");
+
+  ExpectContains(
+      html,
+      "<pre><code>No PlantUML Support or error in PlantUML code</code></pre>",
+      "plantuml fence shows fallback when renderer is unavailable");
+  ExpectNotContains(html, "@startuml",
+                    "plantuml fallback does not display diagram source");
+}
+
+#ifdef GLANCE_PLANTUML_EXECUTABLE
+void TestMarkdownRendererRendersPlantUmlSvg() {
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument(
+      "```plantuml\n@startuml\nAlice -> Bob: Hello\n@enduml\n```\n");
+
+  ExpectContains(html, "<div class=\"plantuml-diagram\"><svg",
+                 "available plantuml renderer produces inline SVG");
+  ExpectNotContains(html, "No PlantUML Support or error in PlantUML code",
+                    "available plantuml renderer does not use fallback");
+}
+#endif
+
 void TestMarkdownValidatorAllowsGithubLanguageFences() {
   MarkdownValidator validator;
   const std::vector<MarkdownDiagnostic> diagnostics = validator.Validate(
@@ -447,6 +473,10 @@ int main() {
   TestMarkdownValidatorAllowsGithubExtensions();
   TestMarkdownRendererRendersSubscriptAndSuperscript();
   TestMarkdownRendererHandlesGithubLanguageFences();
+  TestMarkdownRendererShowsPlantUmlFallbackWithoutRenderer();
+#ifdef GLANCE_PLANTUML_EXECUTABLE
+  TestMarkdownRendererRendersPlantUmlSvg();
+#endif
   TestMarkdownValidatorAllowsGithubLanguageFences();
   TestMarkdownRendererUsesFlavorDefinedInlineTags();
 

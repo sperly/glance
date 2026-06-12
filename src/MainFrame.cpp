@@ -59,6 +59,7 @@ enum {
   ID_INSERT_LINK,
   ID_INSERT_IMAGE,
   ID_INSERT_TABLE,
+  ID_INSERT_PLANTUML,
   ID_INSERT_CODE_BLOCK,
   ID_INSERT_INLINE_CODE,
   ID_INSERT_BLOCKQUOTE,
@@ -202,6 +203,9 @@ bool GetRequiredTagForMarkdownCommand(MarkdownCommand command,
     case MarkdownCommand::Table:
       *tag = MarkdownTag::Table;
       return true;
+    case MarkdownCommand::PlantUmlDiagram:
+      *tag = MarkdownTag::FencedCodeBlock;
+      return true;
     default:
       return false;
   }
@@ -233,6 +237,7 @@ const std::vector<MarkdownMenuCommand>& GetMarkdownMenuCommands() {
       {ID_INSERT_LINK, MarkdownCommand::Link},
       {ID_INSERT_IMAGE, MarkdownCommand::Image},
       {ID_INSERT_TABLE, MarkdownCommand::Table},
+      {ID_INSERT_PLANTUML, MarkdownCommand::PlantUmlDiagram},
       {ID_INSERT_BULLET_LIST, MarkdownCommand::BulletList},
       {ID_INSERT_NUMBERED_LIST, MarkdownCommand::NumberedList},
       {ID_INSERT_TASK_LIST, MarkdownCommand::TaskList},
@@ -448,6 +453,8 @@ void MainFrame::CreateMenuBar() {
   insertMenu->Append(ID_INSERT_LINK, "&Link\tCtrl+K", "Insert a Markdown link");
   insertMenu->Append(ID_INSERT_IMAGE, "&Image...", "Insert a Markdown image");
   insertMenu->Append(ID_INSERT_TABLE, "&Table", "Insert a Markdown table");
+  insertMenu->Append(ID_INSERT_PLANTUML, "&PlantUML Diagram",
+                     "Insert a fenced PlantUML diagram");
   insertMenu->AppendSeparator();
   insertMenu->Append(ID_INSERT_BULLET_LIST, "&Bullet List");
   insertMenu->Append(ID_INSERT_NUMBERED_LIST, "&Numbered List");
@@ -909,6 +916,9 @@ void MainFrame::OnInsertCommand(wxCommandEvent& event) {
       }
       break;
     }
+    case ID_INSERT_PLANTUML:
+      ExecuteMarkdownCommand(MarkdownCommand::PlantUmlDiagram);
+      break;
     case ID_INSERT_CODE_BLOCK:
       ExecuteMarkdownCommand(MarkdownCommand::CodeBlock);
       break;
@@ -1290,6 +1300,7 @@ void MainFrame::UpdateDocumentCommandState() {
       ID_INSERT_LINK,
       ID_INSERT_IMAGE,
       ID_INSERT_TABLE,
+      ID_INSERT_PLANTUML,
       ID_INSERT_BULLET_LIST,
       ID_INSERT_NUMBERED_LIST,
       ID_INSERT_TASK_LIST,
