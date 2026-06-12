@@ -260,6 +260,12 @@ Then rerun CMake and rebuild the application.
 
 ## Version History
 
+### v1.3.0 (2026-05-21)
+
+- Added Search and Replace functionality
+- Added support for editor panel font and font size settings.
+- Added special character escaping
+
 ### v1.2.0 (2026-05-19)
 
 - Added support for table formatting (left aligned, centered, right aligned columns)
