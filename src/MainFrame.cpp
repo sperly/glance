@@ -60,6 +60,7 @@ enum {
   ID_INSERT_IMAGE,
   ID_INSERT_TABLE,
   ID_INSERT_PLANTUML,
+  ID_INSERT_MERMAID,
   ID_INSERT_CODE_BLOCK,
   ID_INSERT_INLINE_CODE,
   ID_INSERT_BLOCKQUOTE,
@@ -76,6 +77,7 @@ enum {
   ID_DOCUMENT_SETTINGS,
   ID_DOCUMENT_VALIDATE,
   ID_EDITOR_FONT,
+  ID_FOLLOW_SOURCE,
   ID_PREVIEW_ZOOM_IN,
   ID_PREVIEW_ZOOM_OUT,
   ID_PREVIEW_ZOOM_RESET,
@@ -204,6 +206,7 @@ bool GetRequiredTagForMarkdownCommand(MarkdownCommand command,
       *tag = MarkdownTag::Table;
       return true;
     case MarkdownCommand::PlantUmlDiagram:
+    case MarkdownCommand::MermaidDiagram:
       *tag = MarkdownTag::FencedCodeBlock;
       return true;
     default:
@@ -238,6 +241,7 @@ const std::vector<MarkdownMenuCommand>& GetMarkdownMenuCommands() {
       {ID_INSERT_IMAGE, MarkdownCommand::Image},
       {ID_INSERT_TABLE, MarkdownCommand::Table},
       {ID_INSERT_PLANTUML, MarkdownCommand::PlantUmlDiagram},
+      {ID_INSERT_MERMAID, MarkdownCommand::MermaidDiagram},
       {ID_INSERT_BULLET_LIST, MarkdownCommand::BulletList},
       {ID_INSERT_NUMBERED_LIST, MarkdownCommand::NumberedList},
       {ID_INSERT_TASK_LIST, MarkdownCommand::TaskList},
@@ -282,12 +286,11 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
                     MainFrame::OnEditPaste) EVT_MENU(wxID_SELECTALL,
                                                      MainFrame::OnEditSelectAll)
                     EVT_MENU(ID_EDITOR_FONT, MainFrame::OnEditorFont) EVT_MENU(
-                        ID_PREVIEW_ZOOM_IN,
-                        MainFrame::
-                            OnPreviewZoomIn) EVT_MENU(ID_PREVIEW_ZOOM_OUT,
-                                                      MainFrame::
-                                                          OnPreviewZoomOut)
-                        EVT_MENU(
+                        ID_FOLLOW_SOURCE,
+                        MainFrame::OnFollowSource) EVT_MENU(ID_PREVIEW_ZOOM_IN,
+                                                            MainFrame::
+                                                                OnPreviewZoomIn)
+                        EVT_MENU(ID_PREVIEW_ZOOM_OUT, MainFrame::OnPreviewZoomOut) EVT_MENU(
                             ID_PREVIEW_ZOOM_RESET,
                             MainFrame::
                                 OnPreviewZoomReset) EVT_MENU(ID_EDIT_SEARCH_REPLACE,
@@ -328,7 +331,8 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame) EVT_MENU(
       m_splitter(nullptr),
       m_editorPreviewSplitter(nullptr),
       m_recentFilesMenu(nullptr),
-      m_recentFoldersMenu(nullptr) {
+      m_recentFoldersMenu(nullptr),
+      m_syncedSourceLine(0) {
   m_recentFiles = m_settingsManager.LoadRecentFiles();
   m_recentFolders = m_settingsManager.LoadRecentFolders();
 
@@ -455,6 +459,8 @@ void MainFrame::CreateMenuBar() {
   insertMenu->Append(ID_INSERT_TABLE, "&Table", "Insert a Markdown table");
   insertMenu->Append(ID_INSERT_PLANTUML, "&PlantUML Diagram",
                      "Insert a fenced PlantUML diagram");
+  insertMenu->Append(ID_INSERT_MERMAID, "&Mermaid Diagram",
+                     "Insert a fenced Mermaid diagram");
   insertMenu->AppendSeparator();
   insertMenu->Append(ID_INSERT_BULLET_LIST, "&Bullet List");
   insertMenu->Append(ID_INSERT_NUMBERED_LIST, "&Numbered List");
@@ -485,6 +491,10 @@ void MainFrame::CreateMenuBar() {
   menuBar->Append(formatMenu, "F&ormat");
   menuBar->Append(insertMenu, "&Insert");
   wxMenu* viewMenu = new wxMenu();
+  viewMenu->AppendCheckItem(ID_FOLLOW_SOURCE, "&Follow Source",
+                            "Keep the editor and preview synchronized");
+  viewMenu->Check(ID_FOLLOW_SOURCE, true);
+  viewMenu->AppendSeparator();
   viewMenu->Append(ID_PREVIEW_ZOOM_IN, "Zoom &In\tCtrl++",
                    "Increase the preview zoom");
   viewMenu->Append(ID_PREVIEW_ZOOM_OUT, "Zoom &Out\tCtrl+-",
@@ -540,6 +550,8 @@ void MainFrame::CreateLayout() {
   m_previewPanel = new PreviewPanel(m_editorPreviewSplitter);
   m_previewPanel->Bind(wxEVT_GLANCE_PREVIEW_ZOOM_CHANGED,
                        &MainFrame::OnPreviewZoomChanged, this);
+  m_previewPanel->Bind(wxEVT_GLANCE_PREVIEW_SOURCE_LINE,
+                       &MainFrame::OnPreviewSourceLine, this);
 
   m_editorPreviewSplitter->SplitVertically(m_editorNotebook, m_previewPanel,
                                            500);
@@ -760,6 +772,13 @@ void MainFrame::OnPreviewZoomOut(wxCommandEvent& event) {
   }
 }
 
+void MainFrame::OnFollowSource(wxCommandEvent& event) {
+  if (event.IsChecked()) {
+    m_syncedSourceLine = 0;
+    SyncPreviewToCursor();
+  }
+}
+
 void MainFrame::OnPreviewZoomReset(wxCommandEvent& event) {
   if (m_previewPanel) {
     m_previewPanel->ResetZoom();
@@ -919,6 +938,9 @@ void MainFrame::OnInsertCommand(wxCommandEvent& event) {
     case ID_INSERT_PLANTUML:
       ExecuteMarkdownCommand(MarkdownCommand::PlantUmlDiagram);
       break;
+    case ID_INSERT_MERMAID:
+      ExecuteMarkdownCommand(MarkdownCommand::MermaidDiagram);
+      break;
     case ID_INSERT_CODE_BLOCK:
       ExecuteMarkdownCommand(MarkdownCommand::CodeBlock);
       break;
@@ -1044,16 +1066,34 @@ void MainFrame::OnMarkdownFileActivated(wxCommandEvent& event) {
 
 void MainFrame::OnEditorStatusChanged(wxCommandEvent& event) {
   SetStatusText(event.GetString(), 1);
+  SyncPreviewToCursor();
 }
 
 void MainFrame::OnPreviewZoomChanged(wxCommandEvent& event) {
   SetZoomStatusText(wxString::Format("Zoomlevel: %d%%", event.GetInt()));
 }
 
+void MainFrame::OnPreviewSourceLine(wxCommandEvent& event) {
+  if (!IsFollowSourceEnabled() || !m_editorNotebook) {
+    return;
+  }
+
+  const int sourceLine = event.GetInt();
+  if (sourceLine <= 0) {
+    return;
+  }
+
+  // Remember the line the preview already points at so the caret move below
+  // does not scroll the preview back again.
+  m_syncedSourceLine = sourceLine;
+  m_editorNotebook->GotoSourceLine(sourceLine);
+}
+
 void MainFrame::OnActiveDocumentChanged(wxCommandEvent& event) {
   if (!event.GetString().empty()) {
     SetStatusText("Active file: " + event.GetString(), 0);
   }
+  m_syncedSourceLine = 0;
   UpdateDocumentCommandState();
   UpdatePreview();
 }
@@ -1096,6 +1136,25 @@ void MainFrame::UpdatePreview() {
       m_editorNotebook->GetCurrentContent(),
       m_editorNotebook->GetCurrentFilePath(),
       m_editorNotebook->GetCurrentDocument()->GetMarkdownFlavor());
+}
+
+void MainFrame::SyncPreviewToCursor() {
+  if (!IsFollowSourceEnabled() || !m_previewPanel || !m_editorNotebook) {
+    return;
+  }
+
+  const int sourceLine = m_editorNotebook->GetCurrentSourceLine();
+  if (sourceLine <= 0 || sourceLine == m_syncedSourceLine) {
+    return;
+  }
+
+  m_syncedSourceLine = sourceLine;
+  m_previewPanel->ScrollToSourceLine(sourceLine);
+}
+
+bool MainFrame::IsFollowSourceEnabled() const {
+  wxMenuBar* menuBar = GetMenuBar();
+  return menuBar && menuBar->IsChecked(ID_FOLLOW_SOURCE);
 }
 
 wxString MainFrame::FormatValidationResults() const {
@@ -1301,6 +1360,7 @@ void MainFrame::UpdateDocumentCommandState() {
       ID_INSERT_IMAGE,
       ID_INSERT_TABLE,
       ID_INSERT_PLANTUML,
+      ID_INSERT_MERMAID,
       ID_INSERT_BULLET_LIST,
       ID_INSERT_NUMBERED_LIST,
       ID_INSERT_TASK_LIST,
@@ -1310,6 +1370,7 @@ void MainFrame::UpdateDocumentCommandState() {
       ID_INSERT_DATE_TIME,
       ID_DOCUMENT_SETTINGS,
       ID_DOCUMENT_VALIDATE,
+      ID_FOLLOW_SOURCE,
       ID_PREVIEW_ZOOM_IN,
       ID_PREVIEW_ZOOM_OUT,
       ID_PREVIEW_ZOOM_RESET,

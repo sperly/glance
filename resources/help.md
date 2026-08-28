@@ -62,6 +62,7 @@ In GitHub Markdown mode, the preview supports common Markdown structures:
 - Lists and task lists
 - Fenced code blocks and inline code
 - PlantUML diagrams when the `plantuml` executable is available
+- Mermaid diagrams when the `mmdc` or `mermaid` executable is available
 - Blockquotes
 - Tables
 - Links and images
@@ -75,6 +76,19 @@ spaces are preserved in the preview.
 Vanilla Markdown mode supports the core Markdown subset without GitHub-specific extensions such as tables, task lists, strikethrough, subscript, and superscript.
 
 Image paths are resolved relative to the Markdown file location when possible.
+
+## Preview And Source Synchronization
+
+The editor and the preview follow each other when `View > Follow Source` is
+checked, which is the default. Uncheck it to stop the two panes tracking each
+other.
+
+- Clicking a block in the preview moves the editor caret to the Markdown line that produced it.
+- Moving the caret in the editor highlights the matching block in the preview and scrolls it into view when it is off screen.
+
+Synchronization requires the `wxWebView` preview engine. With the `wxHtmlWindow`
+fallback the preview still renders, but it cannot follow the caret or report
+clicks.
 
 ## Formatting Commands
 
@@ -110,6 +124,7 @@ Use the `Insert` menu to add Markdown snippets:
 - Image
 - Table
 - PlantUML Diagram
+- Mermaid Diagram
 - Bullet List
 - Numbered List
 - Task List
@@ -133,6 +148,19 @@ Alice -> Bob: Hello
 When PlantUML support is unavailable or the diagram source cannot be rendered,
 the preview displays
 `No PlantUML Support or error in PlantUML code` in a code box.
+
+Mermaid diagrams use fenced blocks such as:
+
+````text
+```mermaid
+flowchart TD
+    A[Start] --> B[End]
+```
+````
+
+When Mermaid support is unavailable or the diagram source cannot be rendered,
+the preview displays
+`No Mermaid Support or error in Mermaid code` in a code box.
 
 If text is selected, inserted snippets are placed before the selected text instead of replacing it.
 
@@ -180,5 +208,8 @@ sudo apt install libwxgtk-webview3.2-dev
 
 Then rerun CMake and rebuild the application.
 
-If PlantUML diagrams do not appear in the preview, make sure the `plantuml`
-executable is installed and available when configuring Glance with CMake.
+If PlantUML diagrams do not appear in the preview, install `plantuml` so it
+is on `PATH`, then restart Glance.
+
+If Mermaid diagrams do not appear in the preview, install Mermaid CLI so
+`mmdc` is on `PATH`, then restart Glance.

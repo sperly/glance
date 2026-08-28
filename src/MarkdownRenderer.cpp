@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <initializer_list>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -140,6 +141,35 @@ bool MatchTag(const MarkdownFlavorDefinition& definition, MarkdownTag tag,
   return std::regex_match(value, pattern);
 }
 
+// Adds the originating Markdown line to the outermost element of a rendered
+// block so the preview can be mapped back to the source document.
+std::string WithSourceLine(std::string html, size_t lineIndex, bool enabled) {
+  if (!enabled) {
+    return html;
+  }
+
+  const size_t tagStart = html.find('<');
+  if (tagStart == std::string::npos) {
+    return html;
+  }
+
+  size_t nameEnd = tagStart + 1;
+  if (nameEnd >= html.size() ||
+      !std::isalpha(static_cast<unsigned char>(html[nameEnd]))) {
+    return html;
+  }
+
+  while (nameEnd < html.size() &&
+         (std::isalnum(static_cast<unsigned char>(html[nameEnd])) ||
+          html[nameEnd] == '-')) {
+    ++nameEnd;
+  }
+
+  html.insert(nameEnd,
+              " data-source-line=\"" + std::to_string(lineIndex + 1) + "\"");
+  return html;
+}
+
 std::string BuildFencedCodeBlockOpening(const std::string& language) {
   if (language.empty()) {
     return "<pre><code>";
@@ -148,19 +178,50 @@ std::string BuildFencedCodeBlockOpening(const std::string& language) {
   return "<pre><code class=\"language-" + EscapeHtml(language) + "\">";
 }
 
-bool IsPlantUmlLanguage(const std::string& language) {
-  std::string lower = language;
-  std::transform(lower.begin(), lower.end(), lower.begin(),
+std::string ToLowerAscii(std::string value) {
+  std::transform(value.begin(), value.end(), value.begin(),
                  [](unsigned char ch) { return std::tolower(ch); });
+  return value;
+}
+
+bool IsPlantUmlLanguage(const std::string& language) {
+  const std::string lower = ToLowerAscii(language);
   return lower == "plantuml" || lower == "puml";
 }
 
-wxString DefaultPlantUmlExecutable() {
-#ifdef GLANCE_PLANTUML_EXECUTABLE
-  return GLANCE_PLANTUML_EXECUTABLE;
-#else
+bool IsMermaidLanguage(const std::string& language) {
+  const std::string lower = ToLowerAscii(language);
+  return lower == "mermaid" || lower == "mmd";
+}
+
+wxString FindExecutableOnPath(std::initializer_list<const char*> names) {
+  wxPathList pathList;
+  pathList.AddEnvList("PATH");
+  for (const char* name : names) {
+    const wxString found = pathList.FindAbsoluteValidPath(name);
+    if (!found.empty() && wxFileName::FileExists(found)) {
+      return found;
+    }
+  }
+
   return wxString();
-#endif
+}
+
+wxString QuoteForCommand(wxString value) {
+  value.Replace("\"", "\\\"");
+  return "\"" + value + "\"";
+}
+
+wxString ExtractInlineSvg(const wxString& svg, const wxString& wrapperClass) {
+  const int svgStart = svg.Find("<svg");
+  const int svgEnd = svg.Find("</svg>");
+  if (svgStart == wxNOT_FOUND || svgEnd == wxNOT_FOUND || svgEnd < svgStart) {
+    return wxString();
+  }
+
+  const wxString diagram =
+      svg.Mid(svgStart, svgEnd - svgStart + wxString("</svg>").length());
+  return "<div class=\"" + wrapperClass + "\">" + diagram + "</div>\n";
 }
 
 std::vector<std::string> SplitLines(const std::string& text) {
@@ -405,23 +466,26 @@ std::string RestoreEscapedMarkdownCharacters(
 }
 }  // namespace
 
-MarkdownRenderer::MarkdownRenderer()
-    : m_plantUmlExecutable(DefaultPlantUmlExecutable()) {}
-
 MarkdownRenderer::MarkdownRenderer(const wxString& plantUmlExecutable)
     : m_plantUmlExecutable(plantUmlExecutable) {}
 
+MarkdownRenderer::MarkdownRenderer(const wxString& plantUmlExecutable,
+                                   const wxString& mermaidExecutable)
+    : m_plantUmlExecutable(plantUmlExecutable),
+      m_mermaidExecutable(mermaidExecutable) {}
+
 wxString MarkdownRenderer::RenderDocument(const wxString& markdown,
                                           const wxString& sourceFilePath,
-                                          MarkdownFlavor flavor) const {
+                                          MarkdownFlavor flavor,
+                                          bool trackSourceLines) const {
   const MarkdownFlavorDefinition& definition =
       GetMarkdownFlavorDefinition(flavor);
-  return RenderDocument(markdown, sourceFilePath, definition);
+  return RenderDocument(markdown, sourceFilePath, definition, trackSourceLines);
 }
 
 wxString MarkdownRenderer::RenderDocument(
     const wxString& markdown, const wxString& sourceFilePath,
-    const MarkdownFlavorDefinition& definition) const {
+    const MarkdownFlavorDefinition& definition, bool trackSourceLines) const {
   const std::vector<std::string> lines = SplitLines(ToStdString(markdown));
   wxString baseDirectory;
   if (!sourceFilePath.empty()) {
@@ -430,9 +494,11 @@ wxString MarkdownRenderer::RenderDocument(
 
   std::string html;
   std::string paragraph;
+  size_t paragraphStartLine = 0;
   bool inCodeBlock = false;
   std::string codeBlockLanguage;
   std::string codeBlockContent;
+  size_t codeBlockStartLine = 0;
   bool inUnorderedList = false;
   bool inOrderedList = false;
   const MarkdownTagDefinition* fencedCodeBlockRule =
@@ -448,10 +514,12 @@ wxString MarkdownRenderer::RenderDocument(
 
   auto closeParagraph = [&]() {
     if (!paragraph.empty()) {
-      html += "<p>" +
+      html += WithSourceLine(
+          "<p>" +
               ToStdString(RenderInline(ToWxString(paragraph), baseDirectory,
                                        definition)) +
-              "</p>\n";
+              "</p>\n",
+          paragraphStartLine, trackSourceLines);
       paragraph.clear();
     }
   };
@@ -477,17 +545,22 @@ wxString MarkdownRenderer::RenderDocument(
       closeParagraph();
       closeLists();
       if (inCodeBlock) {
+        std::string block;
         if (IsPlantUmlLanguage(codeBlockLanguage)) {
-          html += ToStdString(RenderPlantUml(ToWxString(codeBlockContent)));
+          block = ToStdString(RenderPlantUml(ToWxString(codeBlockContent)));
+        } else if (IsMermaidLanguage(codeBlockLanguage)) {
+          block = ToStdString(RenderMermaid(ToWxString(codeBlockContent)));
         } else {
-          html += BuildFencedCodeBlockOpening(codeBlockLanguage) +
+          block = BuildFencedCodeBlockOpening(codeBlockLanguage) +
                   EscapeHtml(codeBlockContent) +
                   fencedCodeBlockRule->closingHtml;
         }
+        html += WithSourceLine(block, codeBlockStartLine, trackSourceLines);
         codeBlockLanguage.clear();
         codeBlockContent.clear();
       } else {
         codeBlockLanguage = match.size() > 1 ? match[1].str() : std::string();
+        codeBlockStartLine = i;
       }
       inCodeBlock = !inCodeBlock;
       continue;
@@ -513,7 +586,7 @@ wxString MarkdownRenderer::RenderDocument(
       const std::vector<std::string> headers = SplitTableRow(trimmed);
       const std::vector<TableAlignment> alignments =
           ParseTableAlignments(lines[i + 1]);
-      html += tableRule->openingHtml;
+      html += WithSourceLine(tableRule->openingHtml, i, trackSourceLines);
       for (size_t headerIndex = 0; headerIndex < headers.size();
            ++headerIndex) {
         const TableAlignment alignment = headerIndex < alignments.size()
@@ -557,8 +630,10 @@ wxString MarkdownRenderer::RenderDocument(
       const std::string level = std::to_string(match[1].str().size());
       const std::string content = ToStdString(RenderInline(
           ToWxString(Trim(match[2].str())), baseDirectory, definition));
-      html += ApplyTemplate(headingRule->htmlTemplate,
-                            {{"$level", level}, {"$content", content}});
+      html += WithSourceLine(
+          ApplyTemplate(headingRule->htmlTemplate,
+                        {{"$level", level}, {"$content", content}}),
+          i, trackSourceLines);
       continue;
     }
 
@@ -566,8 +641,10 @@ wxString MarkdownRenderer::RenderDocument(
         MatchTag(definition, MarkdownTag::HorizontalRule, trimmed)) {
       closeParagraph();
       closeLists();
-      html += FindMarkdownTagDefinition(definition, MarkdownTag::HorizontalRule)
-                  ->htmlTemplate;
+      html += WithSourceLine(
+          FindMarkdownTagDefinition(definition, MarkdownTag::HorizontalRule)
+              ->htmlTemplate,
+          i, trackSourceLines);
       continue;
     }
 
@@ -579,8 +656,9 @@ wxString MarkdownRenderer::RenderDocument(
           FindMarkdownTagDefinition(definition, MarkdownTag::Blockquote);
       const std::string content = ToStdString(
           RenderInline(ToWxString(match[1].str()), baseDirectory, definition));
-      html +=
-          ApplyTemplate(blockquoteRule->htmlTemplate, {{"$content", content}});
+      html += WithSourceLine(
+          ApplyTemplate(blockquoteRule->htmlTemplate, {{"$content", content}}),
+          i, trackSourceLines);
       continue;
     }
 
@@ -612,14 +690,18 @@ wxString MarkdownRenderer::RenderDocument(
             Trim(taskMatch[1].str()).empty() ? "" : " checked";
         const std::string content = ToStdString(RenderInline(
             ToWxString(taskMatch[2].str()), baseDirectory, definition));
-        html += ApplyTemplate(taskListRule->htmlTemplate,
-                              {{"$checked", checked}, {"$content", content}});
+        html += WithSourceLine(
+            ApplyTemplate(taskListRule->htmlTemplate,
+                          {{"$checked", checked}, {"$content", content}}),
+            i, trackSourceLines);
       } else {
         const MarkdownTagDefinition* listRule =
             ordered ? orderedListRule : unorderedListRule;
         const std::string content = ToStdString(
             RenderInline(ToWxString(itemText), baseDirectory, definition));
-        html += ApplyTemplate(listRule->htmlTemplate, {{"$content", content}});
+        html += WithSourceLine(
+            ApplyTemplate(listRule->htmlTemplate, {{"$content", content}}), i,
+            trackSourceLines);
       }
       continue;
     }
@@ -627,6 +709,8 @@ wxString MarkdownRenderer::RenderDocument(
     closeLists();
     if (!paragraph.empty()) {
       paragraph += " ";
+    } else {
+      paragraphStartLine = i;
     }
     paragraph += trimmed;
   }
@@ -634,22 +718,44 @@ wxString MarkdownRenderer::RenderDocument(
   closeParagraph();
   closeLists();
   if (inCodeBlock && fencedCodeBlockRule) {
+    std::string block;
     if (IsPlantUmlLanguage(codeBlockLanguage)) {
-      html += ToStdString(RenderPlantUml(ToWxString(codeBlockContent)));
+      block = ToStdString(RenderPlantUml(ToWxString(codeBlockContent)));
+    } else if (IsMermaidLanguage(codeBlockLanguage)) {
+      block = ToStdString(RenderMermaid(ToWxString(codeBlockContent)));
     } else {
-      html += BuildFencedCodeBlockOpening(codeBlockLanguage) +
+      block = BuildFencedCodeBlockOpening(codeBlockLanguage) +
               EscapeHtml(codeBlockContent) + fencedCodeBlockRule->closingHtml;
     }
+    html += WithSourceLine(block, codeBlockStartLine, trackSourceLines);
   }
 
   return ToWxString(html);
 }
 
+wxString MarkdownRenderer::FindPlantUmlExecutable() {
+  return FindExecutableOnPath({
+      "plantuml",
+#ifdef __WXMSW__
+      "plantuml.exe",
+      "plantuml.cmd",
+      "plantuml.bat",
+#endif
+  });
+}
+
+wxString MarkdownRenderer::ResolvePlantUmlExecutable() const {
+  if (!m_plantUmlExecutable.empty()) {
+    return m_plantUmlExecutable;
+  }
+  return FindPlantUmlExecutable();
+}
+
 wxString MarkdownRenderer::RenderPlantUml(const wxString& source) const {
   const wxString fallback =
       "<pre><code>No PlantUML Support or error in PlantUML code</code></pre>\n";
-  if (m_plantUmlExecutable.empty() ||
-      !wxFileName::FileExists(m_plantUmlExecutable)) {
+  const wxString executable = ResolvePlantUmlExecutable();
+  if (executable.empty() || !wxFileName::FileExists(executable)) {
     return fallback;
   }
 
@@ -676,12 +782,9 @@ wxString MarkdownRenderer::RenderPlantUml(const wxString& source) const {
   environment.env["JAVA_TOOL_OPTIONS"] =
       javaOptions + "-Djava.awt.headless=true";
 
-  wxString executable = m_plantUmlExecutable;
-  executable.Replace("\"", "\\\"");
-  wxString inputPath = sourcePath;
-  inputPath.Replace("\"", "\\\"");
-  const wxString command =
-      "\"" + executable + "\" -tsvg -charset UTF-8 \"" + inputPath + "\"";
+  const wxString command = QuoteForCommand(executable) +
+                           " -tsvg -charset UTF-8 " +
+                           QuoteForCommand(sourcePath);
   const long exitCode =
       wxExecute(command, wxEXEC_SYNC | wxEXEC_NOEVENTS, nullptr, &environment);
 
@@ -698,15 +801,83 @@ wxString MarkdownRenderer::RenderPlantUml(const wxString& source) const {
     wxRemoveFile(svgPath);
   }
 
-  const int svgStart = svg.Find("<svg");
-  const int svgEnd = svg.Find("</svg>");
-  if (svgStart == wxNOT_FOUND || svgEnd == wxNOT_FOUND || svgEnd < svgStart) {
+  const wxString diagram = ExtractInlineSvg(svg, "plantuml-diagram");
+  if (diagram.empty()) {
+    return fallback;
+  }
+  return diagram;
+}
+
+wxString MarkdownRenderer::FindMermaidExecutable() {
+  return FindExecutableOnPath({
+      "mmdc",
+      "mermaid",
+#ifdef __WXMSW__
+      "mmdc.exe",
+      "mmdc.cmd",
+      "mmdc.bat",
+      "mermaid.exe",
+      "mermaid.cmd",
+      "mermaid.bat",
+#endif
+  });
+}
+
+wxString MarkdownRenderer::ResolveMermaidExecutable() const {
+  if (!m_mermaidExecutable.empty()) {
+    return m_mermaidExecutable;
+  }
+  return FindMermaidExecutable();
+}
+
+wxString MarkdownRenderer::RenderMermaid(const wxString& source) const {
+  const wxString fallback =
+      "<pre><code>No Mermaid Support or error in Mermaid code</code></pre>\n";
+  const wxString executable = ResolveMermaidExecutable();
+  if (executable.empty() || !wxFileName::FileExists(executable)) {
     return fallback;
   }
 
-  const wxString diagram =
-      svg.Mid(svgStart, svgEnd - svgStart + wxString("</svg>").length());
-  return "<div class=\"plantuml-diagram\">" + diagram + "</div>\n";
+  const wxString tempBase = wxFileName::CreateTempFileName("glance-mermaid-");
+  if (tempBase.empty()) {
+    return fallback;
+  }
+  wxRemoveFile(tempBase);
+
+  const wxString sourcePath = tempBase + ".mmd";
+  wxFile sourceFile(sourcePath, wxFile::write);
+  if (!sourceFile.IsOpened() || !sourceFile.Write(source)) {
+    if (wxFileExists(sourcePath)) {
+      wxRemoveFile(sourcePath);
+    }
+    return fallback;
+  }
+  sourceFile.Close();
+
+  const wxString svgPath = tempBase + ".svg";
+  const wxString command = QuoteForCommand(executable) + " -i " +
+                           QuoteForCommand(sourcePath) + " -o " +
+                           QuoteForCommand(svgPath) + " -q";
+  const long exitCode = wxExecute(command, wxEXEC_SYNC | wxEXEC_NOEVENTS);
+
+  wxString svg;
+  if (exitCode == 0 && wxFileExists(svgPath)) {
+    wxFile svgFile(svgPath);
+    if (svgFile.IsOpened()) {
+      svgFile.ReadAll(&svg);
+    }
+  }
+
+  wxRemoveFile(sourcePath);
+  if (wxFileExists(svgPath)) {
+    wxRemoveFile(svgPath);
+  }
+
+  const wxString diagram = ExtractInlineSvg(svg, "mermaid-diagram");
+  if (diagram.empty()) {
+    return fallback;
+  }
+  return diagram;
 }
 
 wxString MarkdownRenderer::RenderInline(

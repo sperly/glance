@@ -53,6 +53,17 @@ wxString GlanceCtrl::GetEditorStatus() const {
                           column, selectionLength, GetTextLength());
 }
 
+int GlanceCtrl::GetCurrentSourceLine() const {
+  return LineFromPosition(GetCurrentPos()) + 1;
+}
+
+void GlanceCtrl::GotoSourceLine(int sourceLine) {
+  const int line =
+      std::clamp(sourceLine - 1, 0, std::max(0, GetLineCount() - 1));
+  EnsureVisibleEnforcePolicy(line);
+  GotoLine(line);
+}
+
 bool GlanceCtrl::FindNextText(const wxString& searchText, bool matchCase,
                               bool wrap) {
   if (searchText.empty()) {
@@ -237,6 +248,9 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
     }
     case MarkdownCommand::PlantUmlDiagram:
       InsertSnippet("\n```plantuml\n\n```\n");
+      break;
+    case MarkdownCommand::MermaidDiagram:
+      InsertSnippet("\n```mermaid\n\n```\n");
       break;
     case MarkdownCommand::Date:
       InsertSnippet(wxDateTime::Now().FormatISODate());

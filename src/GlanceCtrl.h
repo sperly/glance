@@ -34,6 +34,7 @@ enum class MarkdownCommand {
   Image,
   Table,
   PlantUmlDiagram,
+  MermaidDiagram,
   Date,
   Time,
   DateTime,
@@ -51,6 +52,8 @@ class GlanceCtrl : public wxStyledTextCtrl {
   void SaveToDocument();
   void SetEditorFont(const wxFont& font);
   wxString GetEditorStatus() const;
+  int GetCurrentSourceLine() const;
+  void GotoSourceLine(int sourceLine);
   bool FindNextText(const wxString& searchText, bool matchCase, bool wrap);
   bool ReplaceNextText(const wxString& searchText,
                        const wxString& replacementText, bool matchCase,

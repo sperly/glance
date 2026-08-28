@@ -13,6 +13,7 @@
 class wxHtmlEasyPrinting;
 
 wxDECLARE_EVENT(wxEVT_GLANCE_PREVIEW_ZOOM_CHANGED, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_GLANCE_PREVIEW_SOURCE_LINE, wxCommandEvent);
 
 class PreviewPanel : public wxPanel {
  public:
@@ -22,6 +23,7 @@ class PreviewPanel : public wxPanel {
   void ShowMarkdown(const wxString& markdown, const wxString& sourceFilePath,
                     MarkdownFlavor flavor = MarkdownFlavor::GitHub);
   void Clear();
+  void ScrollToSourceLine(int sourceLine);
   wxString GetHtmlSource() const;
   bool PrintMarkdown(const wxString& markdown, const wxString& sourceFilePath,
                      const wxString& title,
@@ -38,9 +40,13 @@ class PreviewPanel : public wxPanel {
 #ifdef GLANCE_USE_WEBVIEW
   void OnScriptMessage(wxWebViewEvent& event);
   void OnTitleChanged(wxWebViewEvent& event);
+  void OnPageLoaded(wxWebViewEvent& event);
 #endif
   void ApplyZoom();
+  void ApplySourceLine();
   void SendZoomChanged();
+  void SendSourceLine(int sourceLine);
+  wxString BuildPreviewPage() const;
   wxString BuildHtmlPage(const wxString& renderedBody) const;
   wxString GetBasePath() const;
   wxString GetBaseUrl() const;
@@ -57,6 +63,7 @@ class PreviewPanel : public wxPanel {
   wxString m_sourceFilePath;
   MarkdownFlavor m_flavor;
   double m_zoomLevel;
+  int m_sourceLine;
 };
 
 #endif  // PREVIEW_PANEL_H

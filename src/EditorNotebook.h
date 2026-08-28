@@ -32,6 +32,8 @@ class EditorNotebook : public wxAuiNotebook {
   Document* GetCurrentDocument() const;
   wxString GetCurrentContent() const;
   wxString GetCurrentFilePath() const;
+  int GetCurrentSourceLine() const;
+  void GotoSourceLine(int sourceLine);
 
   void Undo();
   void Redo();

@@ -399,8 +399,24 @@ void TestMarkdownRendererShowsPlantUmlFallbackWithoutRenderer() {
                     "plantuml fallback does not display diagram source");
 }
 
-#ifdef GLANCE_PLANTUML_EXECUTABLE
+void TestMarkdownRendererShowsMermaidFallbackWithoutRenderer() {
+  MarkdownRenderer renderer(wxString(), "/path/that/does/not/contain/mermaid");
+  const wxString html =
+      renderer.RenderDocument("```mermaid\nflowchart TD\n    A --> B\n```\n");
+
+  ExpectContains(
+      html,
+      "<pre><code>No Mermaid Support or error in Mermaid code</code></pre>",
+      "mermaid fence shows fallback when renderer is unavailable");
+  ExpectNotContains(html, "flowchart",
+                    "mermaid fallback does not display diagram source");
+}
+
 void TestMarkdownRendererRendersPlantUmlSvg() {
+  if (MarkdownRenderer::FindPlantUmlExecutable().empty()) {
+    return;
+  }
+
   MarkdownRenderer renderer;
   const wxString html = renderer.RenderDocument(
       "```plantuml\n@startuml\nAlice -> Bob: Hello\n@enduml\n```\n");
@@ -410,7 +426,74 @@ void TestMarkdownRendererRendersPlantUmlSvg() {
   ExpectNotContains(html, "No PlantUML Support or error in PlantUML code",
                     "available plantuml renderer does not use fallback");
 }
-#endif
+
+void TestMarkdownRendererRendersMermaidSvg() {
+  if (MarkdownRenderer::FindMermaidExecutable().empty()) {
+    return;
+  }
+
+  MarkdownRenderer renderer;
+  const wxString html =
+      renderer.RenderDocument("```mermaid\nflowchart TD\n    A --> B\n```\n");
+
+  ExpectContains(html, "<div class=\"mermaid-diagram\"><svg",
+                 "available mermaid renderer produces inline SVG");
+  ExpectNotContains(html, "No Mermaid Support or error in Mermaid code",
+                    "available mermaid renderer does not use fallback");
+}
+
+void TestMarkdownRendererTracksSourceLines() {
+  MarkdownRenderer renderer;
+  const wxString markdown =
+      "# Title\n"
+      "\n"
+      "Intro paragraph.\n"
+      "\n"
+      "- first item\n"
+      "- second item\n"
+      "\n"
+      "> quoted\n";
+
+  const wxString html = renderer.RenderDocument(markdown, wxString(),
+                                                MarkdownFlavor::GitHub, true);
+
+  ExpectContains(html, "<h1 data-source-line=\"1\">Title</h1>",
+                 "heading records its source line");
+  ExpectContains(html, "<p data-source-line=\"3\">Intro paragraph.</p>",
+                 "paragraph records the line it starts on");
+  ExpectContains(html, "<li data-source-line=\"5\">first item</li>",
+                 "first list item records its source line");
+  ExpectContains(html, "<li data-source-line=\"6\">second item</li>",
+                 "second list item records its source line");
+  ExpectContains(html, "<blockquote data-source-line=\"8\">",
+                 "blockquote records its source line");
+}
+
+void TestMarkdownRendererOmitsSourceLinesByDefault() {
+  MarkdownRenderer renderer;
+  const wxString html = renderer.RenderDocument("# Title\n");
+
+  ExpectContains(html, "<h1>Title</h1>",
+                 "rendering without tracking keeps plain markup");
+  ExpectNotContains(html, "data-source-line",
+                    "source line attributes are opt-in");
+}
+
+void TestMarkdownRendererTracksFencedBlockStartLine() {
+  MarkdownRenderer renderer;
+  const wxString markdown =
+      "Intro.\n"
+      "\n"
+      "```sh\n"
+      "echo hi\n"
+      "```\n";
+
+  const wxString html = renderer.RenderDocument(markdown, wxString(),
+                                                MarkdownFlavor::GitHub, true);
+
+  ExpectContains(html, "<pre data-source-line=\"3\">",
+                 "fenced code block records its opening fence line");
+}
 
 void TestMarkdownValidatorAllowsGithubLanguageFences() {
   MarkdownValidator validator;
@@ -474,11 +557,14 @@ int main() {
   TestMarkdownRendererRendersSubscriptAndSuperscript();
   TestMarkdownRendererHandlesGithubLanguageFences();
   TestMarkdownRendererShowsPlantUmlFallbackWithoutRenderer();
-#ifdef GLANCE_PLANTUML_EXECUTABLE
+  TestMarkdownRendererShowsMermaidFallbackWithoutRenderer();
   TestMarkdownRendererRendersPlantUmlSvg();
-#endif
+  TestMarkdownRendererRendersMermaidSvg();
   TestMarkdownValidatorAllowsGithubLanguageFences();
   TestMarkdownRendererUsesFlavorDefinedInlineTags();
+  TestMarkdownRendererTracksSourceLines();
+  TestMarkdownRendererOmitsSourceLinesByDefault();
+  TestMarkdownRendererTracksFencedBlockStartLine();
 
   if (g_failureCount > 0) {
     std::cerr << g_failureCount << " test failure(s)\n";

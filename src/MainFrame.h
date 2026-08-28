@@ -46,6 +46,7 @@ class MainFrame : public wxFrame {
   void OnPreviewZoomIn(wxCommandEvent& event);
   void OnPreviewZoomOut(wxCommandEvent& event);
   void OnPreviewZoomReset(wxCommandEvent& event);
+  void OnFollowSource(wxCommandEvent& event);
   void OnEditSearchReplace(wxCommandEvent& event);
   void OnFormatCommand(wxCommandEvent& event);
   void OnInsertCommand(wxCommandEvent& event);
@@ -58,12 +59,15 @@ class MainFrame : public wxFrame {
   void OnMarkdownFileActivated(wxCommandEvent& event);
   void OnEditorStatusChanged(wxCommandEvent& event);
   void OnPreviewZoomChanged(wxCommandEvent& event);
+  void OnPreviewSourceLine(wxCommandEvent& event);
   void OnActiveDocumentChanged(wxCommandEvent& event);
   void OnDocumentChanged(wxCommandEvent& event);
   void OnClose(wxCloseEvent& event);
   void OnActivate(wxActivateEvent& event);
 
   void UpdatePreview();
+  void SyncPreviewToCursor();
+  bool IsFollowSourceEnabled() const;
   wxString FormatValidationResults() const;
   bool CreateNewFile(const wxString& filePath);
   bool ExecuteMarkdownCommand(MarkdownCommand command,
@@ -93,6 +97,7 @@ class MainFrame : public wxFrame {
   wxMenu* m_recentFoldersMenu;
   wxArrayString m_recentFiles;
   wxArrayString m_recentFolders;
+  int m_syncedSourceLine;
   SettingsManager m_settingsManager;
 
   wxDECLARE_EVENT_TABLE();

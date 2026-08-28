@@ -227,6 +227,17 @@ wxString EditorNotebook::GetCurrentFilePath() const {
   return document ? document->GetFilePath() : wxString();
 }
 
+int EditorNotebook::GetCurrentSourceLine() const {
+  GlanceCtrl* editor = GetCurrentEditor();
+  return editor ? editor->GetCurrentSourceLine() : 0;
+}
+
+void EditorNotebook::GotoSourceLine(int sourceLine) {
+  if (GlanceCtrl* editor = GetCurrentEditor()) {
+    editor->GotoSourceLine(sourceLine);
+  }
+}
+
 void EditorNotebook::Undo() {
   if (GlanceCtrl* editor = GetCurrentEditor()) editor->Undo();
 }

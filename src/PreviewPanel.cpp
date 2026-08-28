@@ -10,6 +10,7 @@
 #include "EmbeddedResources.h"
 
 wxDEFINE_EVENT(wxEVT_GLANCE_PREVIEW_ZOOM_CHANGED, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_GLANCE_PREVIEW_SOURCE_LINE, wxCommandEvent);
 
 namespace {
 constexpr int PreviewDebounceMs = 400;
@@ -17,6 +18,7 @@ constexpr double MinZoomLevel = 0.5;
 constexpr double MaxZoomLevel = 2.0;
 constexpr double ZoomStep = 0.1;
 const wxString ZoomTitlePrefix = "GlanceZoom:";
+const wxString SourceLineMessagePrefix = "source-line:";
 
 int ScaledPixels(int pixels, double zoomLevel) {
   return std::max(1, static_cast<int>(std::lround(pixels * zoomLevel)));
@@ -42,7 +44,8 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
       m_htmlPrinter(new wxHtmlEasyPrinting("Glance Markdown Editor", this)),
       m_updateTimer(this),
       m_flavor(MarkdownFlavor::GitHub),
-      m_zoomLevel(1.0) {
+      m_zoomLevel(1.0),
+      m_sourceLine(0) {
   wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 #ifdef GLANCE_USE_WEBVIEW
   sizer->Add(m_webView, 1, wxEXPAND);
@@ -56,6 +59,7 @@ PreviewPanel::PreviewPanel(wxWindow* parent)
                   &PreviewPanel::OnScriptMessage, this);
   m_webView->Bind(wxEVT_WEBVIEW_TITLE_CHANGED, &PreviewPanel::OnTitleChanged,
                   this);
+  m_webView->Bind(wxEVT_WEBVIEW_LOADED, &PreviewPanel::OnPageLoaded, this);
 #else
   sizer->Add(m_htmlWindow, 1, wxEXPAND);
   m_htmlWindow->Bind(wxEVT_KEY_DOWN, &PreviewPanel::OnKeyDown, this);
@@ -87,6 +91,7 @@ void PreviewPanel::Clear() {
   m_pendingMarkdown.clear();
   m_sourceFilePath.clear();
   m_flavor = MarkdownFlavor::GitHub;
+  m_sourceLine = 0;
   m_updateTimer.Stop();
 #ifdef GLANCE_USE_WEBVIEW
   m_webView->SetPage(BuildHtmlPage("<p class=\"empty\">No document open</p>"),
@@ -98,6 +103,15 @@ void PreviewPanel::Clear() {
 #endif
 }
 
+void PreviewPanel::ScrollToSourceLine(int sourceLine) {
+  if (sourceLine <= 0) {
+    return;
+  }
+
+  m_sourceLine = sourceLine;
+  ApplySourceLine();
+}
+
 wxString PreviewPanel::GetHtmlSource() const {
   if (m_pendingMarkdown.empty() && m_sourceFilePath.empty()) {
     return BuildHtmlPage("<p class=\"empty\">No document open</p>");
@@ -105,6 +119,15 @@ wxString PreviewPanel::GetHtmlSource() const {
 
   return BuildHtmlPage(
       m_renderer.RenderDocument(m_pendingMarkdown, m_sourceFilePath, m_flavor));
+}
+
+wxString PreviewPanel::BuildPreviewPage() const {
+  if (m_pendingMarkdown.empty() && m_sourceFilePath.empty()) {
+    return BuildHtmlPage("<p class=\"empty\">No document open</p>");
+  }
+
+  return BuildHtmlPage(m_renderer.RenderDocument(
+      m_pendingMarkdown, m_sourceFilePath, m_flavor, true));
 }
 
 bool PreviewPanel::PrintMarkdown(const wxString& markdown,
@@ -128,10 +151,10 @@ bool PreviewPanel::PrintMarkdown(const wxString& markdown,
 
 void PreviewPanel::OnUpdateTimer(wxTimerEvent& event) {
 #ifdef GLANCE_USE_WEBVIEW
-  m_webView->SetPage(GetHtmlSource(), GetBaseUrl());
+  m_webView->SetPage(BuildPreviewPage(), GetBaseUrl());
   ApplyZoom();
 #else
-  m_htmlWindow->SetPage(GetHtmlSource());
+  m_htmlWindow->SetPage(BuildPreviewPage());
 #endif
 }
 
@@ -193,6 +216,13 @@ void PreviewPanel::OnScriptMessage(wxWebViewEvent& event) {
       m_zoomLevel = std::clamp(zoomLevel, MinZoomLevel, MaxZoomLevel);
       SendZoomChanged();
     }
+  } else if (message.StartsWith(SourceLineMessagePrefix)) {
+    long sourceLine = 0;
+    if (message.Mid(SourceLineMessagePrefix.length()).ToLong(&sourceLine) &&
+        sourceLine > 0) {
+      m_sourceLine = static_cast<int>(sourceLine);
+      SendSourceLine(m_sourceLine);
+    }
   }
 }
 
@@ -211,6 +241,13 @@ void PreviewPanel::OnTitleChanged(wxWebViewEvent& event) {
   m_zoomLevel = std::clamp(static_cast<double>(zoomPercent) / 100.0,
                            MinZoomLevel, MaxZoomLevel);
   SendZoomChanged();
+}
+
+// A re-render resets the scroll position, so restore the tracked source line
+// once the refreshed page is ready.
+void PreviewPanel::OnPageLoaded(wxWebViewEvent& event) {
+  ApplySourceLine();
+  event.Skip();
 }
 #endif
 
@@ -231,10 +268,30 @@ void PreviewPanel::ApplyZoom() {
 #endif
 }
 
+void PreviewPanel::ApplySourceLine() {
+  if (m_sourceLine <= 0) {
+    return;
+  }
+
+#ifdef GLANCE_USE_WEBVIEW
+  m_webView->RunScript(
+      wxString::Format("if (window.glanceRevealSourceLine) { "
+                       "window.glanceRevealSourceLine(%d); }",
+                       m_sourceLine));
+#endif
+}
+
 void PreviewPanel::SendZoomChanged() {
   wxCommandEvent event(wxEVT_GLANCE_PREVIEW_ZOOM_CHANGED, GetId());
   event.SetEventObject(this);
   event.SetInt(static_cast<int>(std::lround(m_zoomLevel * 100.0)));
+  wxPostEvent(this, event);
+}
+
+void PreviewPanel::SendSourceLine(int sourceLine) {
+  wxCommandEvent event(wxEVT_GLANCE_PREVIEW_SOURCE_LINE, GetId());
+  event.SetEventObject(this);
+  event.SetInt(sourceLine);
   wxPostEvent(this, event);
 }
 
@@ -326,11 +383,19 @@ th { background: #f1f5f9; text-align: left; }
 img { max-width: 100%; height: auto; }
 .plantuml-diagram { overflow: auto; margin: 1em 0; text-align: center; }
 .plantuml-diagram svg { max-width: 100%; height: auto; }
+.mermaid-diagram { overflow: auto; margin: 1em 0; text-align: center; }
+.mermaid-diagram svg { max-width: 100%; height: auto; }
 hr { border: 0; border-top: 1px solid #d8dee6; margin: 1.5em 0; }
 .glance-strike { text-decoration: line-through; }
 mark { background: #fff3a3; color: inherit; padding: 0.05em 0.2em; border-radius: 3px; }
 .task { list-style: none; margin-left: -1.2em; }
 .empty { color: #6b7280; }
+[data-source-line] { scroll-margin: 24px; }
+.glance-active-line {
+    background: #fff8d6;
+    box-shadow: -6px 0 0 0 #fbbf24;
+    transition: background 0.4s ease-out, box-shadow 0.4s ease-out;
+}
 )" +
       EmbeddedUtf8String(GetEmbeddedHighlightCssData(),
                          GetEmbeddedHighlightCssSize()) +
@@ -374,6 +439,48 @@ document.addEventListener('wheel', function(event) {
     changePreviewZoom(event.deltaY < 0 ? 0.1 : -0.1);
   }
 }, { passive: false });
+
+function glanceSourceLineElements() {
+  return Array.prototype.slice.call(document.querySelectorAll('[data-source-line]'));
+}
+
+document.addEventListener('click', function(event) {
+  var element = event.target;
+  while (element && element !== document.body) {
+    if (element.hasAttribute && element.hasAttribute('data-source-line')) {
+      postGlanceMessage('source-line:' + element.getAttribute('data-source-line'));
+      return;
+    }
+    element = element.parentNode;
+  }
+});
+
+window.glanceRevealSourceLine = function(line) {
+  var elements = glanceSourceLineElements();
+  if (!elements.length) {
+    return;
+  }
+
+  var target = elements[0];
+  for (var i = 0; i < elements.length; i++) {
+    if (parseInt(elements[i].getAttribute('data-source-line'), 10) <= line) {
+      target = elements[i];
+    } else {
+      break;
+    }
+  }
+
+  elements.forEach(function(element) {
+    element.classList.remove('glance-active-line');
+  });
+  target.classList.add('glance-active-line');
+
+  var bounds = target.getBoundingClientRect();
+  var fullyVisible = bounds.top >= 0 && bounds.bottom <= window.innerHeight;
+  if (!fullyVisible) {
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+};
 
 document.addEventListener('keydown', function(event) {
   if (!event.ctrlKey) {

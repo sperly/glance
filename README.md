@@ -140,6 +140,7 @@ In GitHub Markdown mode, the preview supports common Markdown structures:
 - Lists and task lists
 - Fenced code blocks and inline code
 - PlantUML diagrams when the `plantuml` executable is available
+- Mermaid diagrams when the `mmdc` or `mermaid` executable is available
 - Blockquotes
 - Tables
 - Links and images
@@ -153,6 +154,19 @@ spaces are preserved in the preview.
 Vanilla Markdown mode supports the core Markdown subset without GitHub-specific extensions such as tables, task lists, strikethrough, subscript, and superscript.
 
 Image paths are resolved relative to the Markdown file location when possible.
+
+### Preview And Source Synchronization
+
+The editor and the preview follow each other when `View > Follow Source` is
+checked, which is the default. Uncheck it to stop the two panes tracking each
+other.
+
+- Clicking a block in the preview moves the editor caret to the Markdown line that produced it. Focus stays in the preview so you can keep reading or selecting text.
+- Moving the caret in the editor highlights the matching block in the preview and scrolls it into view when it is off screen.
+
+The preview also restores this position after it re-renders, so it no longer jumps back to the top while you type.
+
+Synchronization requires the `wxWebView` preview engine. With the `wxHtmlWindow` fallback the preview still renders, but it cannot follow the caret or report clicks.
 
 ### Formatting Commands
 
@@ -188,6 +202,7 @@ Use the `Insert` menu to add Markdown snippets:
 - Image
 - Table
 - PlantUML Diagram
+- Mermaid Diagram
 - Bullet List
 - Numbered List
 - Task List
@@ -208,9 +223,23 @@ Alice -> Bob: Hello
 ```
 ````
 
-CMake detects the `plantuml` executable at configure time. When it is not
-available, or when PlantUML cannot render the diagram source, the preview
+Glance looks for `plantuml` on `PATH` when rendering the preview. When it is
+not available, or when PlantUML cannot render the diagram source, the preview
 displays `No PlantUML Support or error in PlantUML code` in a code box.
+
+Mermaid diagrams use fenced blocks such as:
+
+````text
+```mermaid
+flowchart TD
+    A[Start] --> B[End]
+```
+````
+
+Glance looks for `mmdc` or `mermaid` on `PATH` when rendering the preview.
+When it is not available, or when Mermaid cannot render the diagram source,
+the preview displays `No Mermaid Support or error in Mermaid code` in a
+code box.
 
 If text is selected, inserted snippets are placed before the selected text instead of replacing it.
 
@@ -258,7 +287,21 @@ sudo apt install libwxgtk-webview3.2-dev
 
 Then rerun CMake and rebuild the application.
 
+If PlantUML diagrams do not appear in the preview, install `plantuml` so it
+is on `PATH`, then restart Glance.
+
+If Mermaid diagrams do not appear in the preview, install Mermaid CLI so
+`mmdc` is on `PATH`, then restart Glance.
+
 ## Version History
+
+### v1.5.0 (2026-08-28)
+
+- Added preview rendering for `mermaid` and `mmd` fenced code blocks when Mermaid CLI is available
+- Added an Insert menu command for creating Mermaid diagram blocks
+- Detect PlantUML and Mermaid at runtime on `PATH` so one binary works with or without those tools
+- Added two-way synchronization between the editor caret and the rendered preview
+- The preview now keeps its position when it re-renders instead of scrolling back to the top
 
 ### v1.4.0 (2026-06-12)
 

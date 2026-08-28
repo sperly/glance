@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(glance-mde VERSION 1.4.0)
+project(glance-mde VERSION 1.5.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,45 +11,26 @@ include(GlanceTests)
 include(GlanceWebView)
 include(GlancePackaging)
 include(GlanceFormat)
-include(GlancePlantUml)
 
 set(GLANCE_APP_SOURCES
     src/main.cpp
-    # src/EmbeddedResources.h
     src/GlanceApp.cpp
-    # src/GlanceApp.h
     src/AboutDialog.cpp
-    # src/AboutDialog.h
     src/MainFrame.cpp
-    # src/MainFrame.h
     src/FileTreePanel.cpp
-    # src/FileTreePanel.h
     src/Document.cpp
-    # src/Document.h
     src/DocumentSettingsDialog.cpp
-    # src/DocumentSettingsDialog.h
     src/DocumentManager.cpp
-    # src/DocumentManager.h
     src/EditorNotebook.cpp
-    # src/EditorNotebook.h
     src/GlanceCtrl.cpp
-    # src/GlanceCtrl.h
     src/HelpDialog.cpp
-    # src/HelpDialog.h
     src/MarkdownRenderer.cpp
-    # src/MarkdownRenderer.h
     src/MarkdownFlavor.cpp
-    # src/MarkdownFlavor.h
     src/MarkdownValidator.cpp
-    # src/MarkdownValidator.h
     src/PreviewPanel.cpp
-    # src/PreviewPanel.h
     src/ResourcePaths.cpp
-    # src/ResourcePaths.h
     src/SearchReplaceDialog.cpp
-    # src/SearchReplaceDialog.h
     src/SettingsManager.cpp
-    # src/SettingsManager.h
 )
 
 set(GLANCE_FORMAT_SOURCES
@@ -72,7 +53,6 @@ add_executable(${PROJECT_NAME} WIN32
 # Link wxWidgets libraries
 target_link_libraries(${PROJECT_NAME} ${wxWidgets_LIBRARIES})
 glance_configure_webview(${PROJECT_NAME})
-glance_configure_plantuml(${PROJECT_NAME})
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE

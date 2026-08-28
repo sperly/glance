@@ -94,12 +94,27 @@ document uses syntax that is not available in that flavor.
 
 Converts Markdown text into an HTML fragment. It uses the selected
 `MarkdownFlavorDefinition` to decide which tags exist and how they render.
+Fenced `plantuml`/`puml` and `mermaid`/`mmd` blocks are rendered to inline SVG
+when `plantuml` or `mmdc`/`mermaid` is available on `PATH` at runtime.
+
+When `trackSourceLines` is enabled, each rendered block carries a
+`data-source-line` attribute holding the 1-based Markdown line it came from.
+The preview uses those attributes to map between the document and the rendered
+output. Printing and preview HTML export render without them.
 
 `src/PreviewPanel.h/cpp`
 
 Displays rendered HTML. It uses `wxWebView` when available and falls back to
 `wxHtmlWindow` otherwise. Preview updates are debounced to avoid re-rendering
 on every keystroke.
+
+Under `wxWebView` it also keeps the preview and the editor in sync. Clicks on a
+rendered block post a `source-line:` script message, which the panel forwards as
+`wxEVT_GLANCE_PREVIEW_SOURCE_LINE`. `ScrollToSourceLine()` goes the other way and
+reveals the block for a given Markdown line, reapplying it after each re-render.
+`MainFrame` connects both directions when `View > Follow Source` is checked
+(the default) and tracks the last synchronized line so the two views do not
+scroll each other in a loop. Unchecking the item stops both directions.
 
 ## File Tree
 
