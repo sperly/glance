@@ -176,6 +176,10 @@ Generates embedded resource source files.
 
 Configures packaging.
 
+`.github/workflows/cmake-multi-platform.yml` builds and tests on Linux and
+Windows. `.github/workflows/release.yml` builds a Debian package and publishes
+a GitHub Release when a `v*` tag is pushed.
+
 `cmake/GlanceFormat.cmake`
 
 Adds `format` and `format-check` targets for clang-format.

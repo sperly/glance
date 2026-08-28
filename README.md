@@ -69,6 +69,20 @@ Check formatting without modifying files:
 cmake --build build --target format-check
 ```
 
+## Releases
+
+Pushing a version tag such as `v1.5.0` runs `.github/workflows/release.yml`.
+That workflow builds a Release Debian package, runs the tests, and publishes a
+GitHub Release with the `.deb` attached.
+
+The tag must match the `project(... VERSION ...)` value in `CMakeLists.txt`
+(`v1.5.0` for `1.5.0`).
+
+```sh
+git tag v1.5.0
+git push origin v1.5.0
+```
+
 ## Documentation
 
 Additional developer documentation lives in `docs/`:
