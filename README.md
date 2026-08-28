@@ -206,6 +206,8 @@ Available commands include:
 - Clear Formatting
 
 Line-based commands operate on the current line or selected lines.
+`Code Block` fences the selected lines, or inserts an empty block with a
+selected placeholder when nothing is selected.
 Some commands are disabled when the current document flavor does not define the required Markdown tag.
 
 ### Insert Commands
@@ -315,7 +317,9 @@ If Mermaid diagrams do not appear in the preview, install Mermaid CLI so
 - Added an Insert menu command for creating Mermaid diagram blocks
 - Detect PlantUML and Mermaid at runtime on `PATH` so one binary works with or without those tools
 - Added two-way synchronization between the editor caret and the rendered preview
+- Added a `View > Follow Source` toggle for the editor and preview synchronization
 - The preview now keeps its position when it re-renders instead of scrolling back to the top
+- Fixed `Format > Code Block` discarding the selection instead of fencing it
 
 ### v1.4.0 (2026-06-12)
 

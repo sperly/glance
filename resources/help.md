@@ -114,6 +114,8 @@ Available commands include:
 - Clear Formatting
 
 Line-based commands operate on the current line or selected lines.
+`Code Block` fences the selected lines, or inserts an empty block with a
+selected placeholder when nothing is selected.
 Some commands are disabled when the current document flavor does not define the required Markdown tag.
 
 ## Insert Commands

@@ -12,6 +12,15 @@ namespace {
 wxFont GetFallbackEditorFont() {
   return wxFont(wxFontInfo(10).Family(wxFONTFAMILY_TELETYPE));
 }
+
+// Scintilla positions are UTF-8 byte offsets, not character counts.
+int ByteLength(const wxString& text) {
+  return static_cast<int>(text.utf8_str().length());
+}
+
+const char* const CodeBlockPlaceholder = "code block";
+const char* const CodeFenceOpen = "```\n";
+const char* const CodeFenceClose = "\n```";
 }  // namespace
 
 GlanceCtrl::GlanceCtrl(wxWindow* parent, Document* document,
@@ -174,7 +183,7 @@ void GlanceCtrl::ExecuteMarkdownCommand(MarkdownCommand command,
       WrapSelection("`", "`", "code");
       break;
     case MarkdownCommand::CodeBlock:
-      InsertSnippet("\n```\ncode block\n```\n");
+      WrapSelectionInCodeBlock();
       break;
     case MarkdownCommand::Blockquote:
       PrefixSelectedLines("> ");
@@ -320,6 +329,50 @@ void GlanceCtrl::WrapSelection(const wxString& prefix, const wxString& suffix,
     SetSelection(selectionStart,
                  selectionStart + static_cast<int>(replacement.length()));
   }
+}
+
+void GlanceCtrl::WrapSelectionInCodeBlock() {
+  int selectionStart = GetSelectionStart();
+  int selectionEnd = GetSelectionEnd();
+  if (selectionEnd < selectionStart) {
+    std::swap(selectionStart, selectionEnd);
+  }
+
+  if (selectionStart == selectionEnd) {
+    const wxString snippet =
+        wxString("\n") + CodeFenceOpen + CodeBlockPlaceholder + "\n```\n";
+
+    BeginUndoAction();
+    InsertText(selectionStart, snippet);
+    EndUndoAction();
+
+    const int placeholderStart =
+        selectionStart + ByteLength(wxString("\n") + CodeFenceOpen);
+    SetSelection(placeholderStart,
+                 placeholderStart + ByteLength(CodeBlockPlaceholder));
+    return;
+  }
+
+  // Fence markers need lines of their own, so grow the range to whole lines.
+  const int startLine = LineFromPosition(selectionStart);
+  int endLine = LineFromPosition(selectionEnd);
+  if (endLine > startLine && selectionEnd == PositionFromLine(endLine)) {
+    --endLine;
+  }
+
+  const int blockStart = PositionFromLine(startLine);
+  const int blockEnd = GetLineEndPosition(endLine);
+  const wxString content = GetTextRange(blockStart, blockEnd);
+
+  BeginUndoAction();
+  SetTargetStart(blockStart);
+  SetTargetEnd(blockEnd);
+  ReplaceTarget(CodeFenceOpen + content + CodeFenceClose);
+  const int replacedEnd = GetTargetEnd();
+  EndUndoAction();
+
+  SetSelection(blockStart + ByteLength(CodeFenceOpen),
+               replacedEnd - ByteLength(CodeFenceClose));
 }
 
 void GlanceCtrl::InsertSnippet(const wxString& snippet) {

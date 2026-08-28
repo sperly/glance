@@ -68,6 +68,7 @@ class GlanceCtrl : public wxStyledTextCtrl {
   void ConfigureEditor();
   void WrapSelection(const wxString& prefix, const wxString& suffix,
                      const wxString& placeholder);
+  void WrapSelectionInCodeBlock();
   void InsertSnippet(const wxString& snippet);
   void PrefixSelectedLines(const wxString& prefix);
   void NumberSelectedLines();
