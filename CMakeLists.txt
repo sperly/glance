@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(glance-mde VERSION 1.5.0)
+project(glance-mde VERSION 1.5.1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

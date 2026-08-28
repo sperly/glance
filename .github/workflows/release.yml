@@ -17,14 +17,18 @@ jobs:
 
       - name: Check tag matches CMake version
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          version="$(sed -n 's/^project(glance-mde VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
-          if [ -z "$version" ]; then
+          # Git tags are vX.Y.Z; CMake project() uses X.Y.Z without the prefix.
+          tag_version="${GITHUB_REF_NAME#v}"
+          cmake_version="$(sed -n 's/^project(glance-mde VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          if [ -z "$cmake_version" ]; then
             echo "Could not read project version from CMakeLists.txt"
             exit 1
           fi
-          if [ "$tag" != "$version" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match CMake version $version"
+          echo "Git tag: ${GITHUB_REF_NAME} -> version ${tag_version}"
+          echo "CMake VERSION: ${cmake_version}"
+          if [ "$tag_version" != "$cmake_version" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match CMake VERSION ${cmake_version}."
+            echo "Bump project(glance-mde VERSION ${tag_version}) in CMakeLists.txt, commit that, then retag that commit as ${GITHUB_REF_NAME}."
             exit 1
           fi
 

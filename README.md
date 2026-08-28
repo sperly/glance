@@ -75,8 +75,10 @@ Pushing a version tag such as `v1.5.0` runs `.github/workflows/release.yml`.
 That workflow builds a Release Debian package, runs the tests, and publishes a
 GitHub Release with the `.deb` attached.
 
-The tag must match the `project(... VERSION ...)` value in `CMakeLists.txt`
-(`v1.5.0` for `1.5.0`).
+The numeric part of the tag must match `project(... VERSION ...)` in
+`CMakeLists.txt`. Git uses a `v` prefix; CMake does not (`v1.5.1` ↔ `1.5.1`).
+Bump CMake and commit that change before creating the tag, so the tagged
+commit already contains the matching version.
 
 ```sh
 git tag v1.5.0
@@ -311,15 +313,18 @@ If Mermaid diagrams do not appear in the preview, install Mermaid CLI so
 
 ## Version History
 
+### v1.5.1 (2026-08-28)
+
+- Added a `View > Follow Source` toggle for the editor and preview synchronization
+- Fixed `Format > Code Block` discarding the selection instead of fencing it
+
 ### v1.5.0 (2026-08-28)
 
 - Added preview rendering for `mermaid` and `mmd` fenced code blocks when Mermaid CLI is available
 - Added an Insert menu command for creating Mermaid diagram blocks
 - Detect PlantUML and Mermaid at runtime on `PATH` so one binary works with or without those tools
 - Added two-way synchronization between the editor caret and the rendered preview
-- Added a `View > Follow Source` toggle for the editor and preview synchronization
 - The preview now keeps its position when it re-renders instead of scrolling back to the top
-- Fixed `Format > Code Block` discarding the selection instead of fencing it
 
 ### v1.4.0 (2026-06-12)
 
