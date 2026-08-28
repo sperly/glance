@@ -48,7 +48,7 @@ jobs:
             c_compiler: cl
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
@@ -94,7 +94,7 @@ jobs:
 
     - name: Store DEB package
       if: runner.os == 'Linux' && matrix.c_compiler == 'gcc'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: glance-deb-package
         path: ${{ steps.strings.outputs.build-output-dir }}/*.deb
